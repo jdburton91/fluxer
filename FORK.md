@@ -12,16 +12,36 @@ fixes to the web client for a self-hosted instance. It is not affiliated with th
 
 ## What is patched
 
-Only the web client (`fluxer_app`), which ships in the `fluxer-app-proxy-self-hosted` image. All
-other services run the official images unchanged.
+The web client (`fluxer_app`), which ships in the `fluxer-app-proxy-self-hosted` image, and the
+desktop app (`fluxer_desktop`). All other services run the official images unchanged.
 
 | Fix | Upstream report |
 | --- | --- |
 | Leaving a channel that denies Speak (such as an AFK channel) no longer leaves you self-muted | [Feedback #4789](https://feedback.fluxer.com/p/4789) |
 | A "Noise suppression strength" slider in voice settings: DeepFilterNet's noise reduction, fixed upstream at 30 dB, can be set from 6 dB to no limit, and changes apply live | [Feedback #4791](https://feedback.fluxer.com/p/4791) |
 
-The official desktop app bundles its own copy of the web client, so these fixes reach people who
-use the instance in a browser.
+The official desktop app bundles its own copy of the web client, so it does not get these fixes.
+Use the fork's desktop app instead (below).
+
+## Desktop app
+
+The [releases](https://github.com/jdburton91/fluxer/releases) carry fork builds of the desktop
+app for Linux (AppImage, `.deb`, `.rpm`, `.tar.gz`) and Windows (a portable ZIP), built by
+`.github/workflows/jd-desktop.yaml` on GitHub Actions. They differ from the official app in three
+ways:
+
+- **The web fixes above are built in.** The module system that would download Fluxer's
+  official web client into the app is off.
+- **They never update themselves.** Fluxer's update feed would replace them with the official
+  build. "Check for updates" points to this fork's releases instead.
+- **They are not code-signed.** Windows SmartScreen warns on first start ("More info", then
+  "Run anyway"). There is no Windows installer, because Fluxer's packaging only makes signed ones.
+
+Each release lists SHA-256 checksums. At sign-in, enter your instance's address as usual.
+
+| Desktop-only change | Why |
+| --- | --- |
+| Self-update off; download links go to this fork | Keeps the fixes through updates |
 
 ## Using it
 
