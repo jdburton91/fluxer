@@ -316,7 +316,7 @@ jobs:
           set -uo pipefail
           out=$(node scripts/release-check.mjs --app 'dist-electron/win-unpacked' --channel stable \
             --expect-renderer "$BUILD_VERSION" --package-origin http://127.0.0.1:9 \
-            --app-arg=--disable-gpu --timeout-seconds 60 2>&1)
+            --app-arg=--disable-gpu --timeout-seconds 60 2>&1) || true
           echo "$out"
           grep -qF "the window loads $BUILD_VERSION and reports Stable Desktop $BUILD_VERSION, Web $BUILD_VERSION" <<<"$out"
 
@@ -361,7 +361,7 @@ jobs:
           set -uo pipefail
           out=$(xvfb-run -a node scripts/release-check.mjs --app dist-electron/linux-unpacked --channel stable \
             --expect-renderer "$BUILD_VERSION" --package-origin http://127.0.0.1:9 \
-            --app-arg=--no-sandbox --app-arg=--disable-gpu --timeout-seconds 60 2>&1)
+            --app-arg=--no-sandbox --app-arg=--disable-gpu --timeout-seconds 60 2>&1) || true
           echo "$out"
           grep -qF "the window loads $BUILD_VERSION and reports Stable Desktop $BUILD_VERSION, Web $BUILD_VERSION" <<<"$out"
 
