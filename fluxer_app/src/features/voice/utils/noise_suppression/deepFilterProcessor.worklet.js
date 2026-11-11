@@ -111,6 +111,9 @@ function createDeepFilterBindings(module) {
 			const ptr = passUint8Array(modelBytes);
 			return wasm.df_create(ptr, vectorLength, attenLimDb) >>> 0;
 		},
+		setAttenLim(handle, attenLimDb) {
+			wasm.df_set_atten_lim(handle, attenLimDb);
+		},
 		frameLength(handle) {
 			return wasm.df_get_frame_length(handle) >>> 0;
 		},
@@ -203,6 +206,10 @@ class DeepFilterProcessor extends AudioWorkletProcessor {
 		if (!message || typeof message !== 'object') return;
 		if (message.type === 'flush' && this.running) {
 			this.resetRings();
+			return;
+		}
+		if (message.type === 'set-atten-lim' && this.running && Number.isFinite(message.attenLimDb)) {
+			this.bindings.setAttenLim(this.handle, message.attenLimDb);
 			return;
 		}
 		if (message.type === 'dispose') this.dispose();

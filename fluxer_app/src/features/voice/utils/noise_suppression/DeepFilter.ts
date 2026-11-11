@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {waitForAbortablePromise} from '@app/features/platform/utils/AbortablePromise';
-
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {ensureDesktopModuleForAsset} from '@app/features/platform/utils/DesktopModuleAssets';
 import {acquireIdleVoiceInputContext, isVoiceInputSourceLive} from '@app/features/voice/engine/VoiceInputAudioContext';
@@ -12,6 +11,7 @@ import NoiseSuppressionAvailability, {
 import {getNoiseSuppressionBackendDescriptor} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
 import {readRequestedNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
 import {getActiveVoiceProcessingMode} from '@app/features/voice/utils/VoiceProcessingProfile';
+import {reaction} from 'mobx';
 
 const logger = new Logger('DeepFilter');
 
@@ -21,7 +21,6 @@ const DEEP_FILTER_PROCESSOR_NAME = 'fluxer-deep-filter';
 const DEEP_FILTER_ASSET_IDLE_MS = 20_000;
 const DEEP_FILTER_ASSET_TOTAL_MS = 10 * 60_000;
 const DEEP_FILTER_BUILD_TIMEOUT_MS = 8000;
-const DEEP_FILTER_ATTEN_LIM_DB = 30;
 const DEEP_FILTER_INPUT_GAIN = 10;
 const DEEP_FILTER_OUTPUT_GAIN = 0.1;
 const DEEP_FILTER_HIGH_PASS_HZ = 60;
@@ -389,7 +388,7 @@ async function createDeepFilterNode(context: AudioContext): Promise<DeepFilterNo
 			processorOptions: {
 				wasmModule: assets.module,
 				modelBytes: assets.modelBytes,
-				attenLimDb: DEEP_FILTER_ATTEN_LIM_DB,
+				attenLimDb: VoiceSettings.getDeepFilterStrengthDb(),
 				inputGain: DEEP_FILTER_INPUT_GAIN,
 				outputGain: DEEP_FILTER_OUTPUT_GAIN,
 				highPassHz: DEEP_FILTER_HIGH_PASS_HZ,
@@ -414,6 +413,10 @@ async function createDeepFilterNode(context: AudioContext): Promise<DeepFilterNo
 	NoiseSuppressionAvailability.clearBackendFailure('deep_filter');
 	const readyNode = node;
 	const readyListen = listen;
+	const stopFollowingStrength = reaction(
+		() => VoiceSettings.getDeepFilterStrengthDb(),
+		(attenLimDb) => readyNode.port.postMessage({type: 'set-atten-lim', attenLimDb}),
+	);
 	return {
 		node: readyNode,
 		flushAndAwaitPrimed: (signal) => {
@@ -423,6 +426,7 @@ async function createDeepFilterNode(context: AudioContext): Promise<DeepFilterNo
 		},
 		watch: (onFault) => watchDeepFilterNode(context, readyNode, readyListen, onFault),
 		dispose: () => {
+			stopFollowingStrength();
 			readyNode.disconnect();
 			readyNode.port.postMessage({type: 'dispose'});
 			readyNode.port.close();
