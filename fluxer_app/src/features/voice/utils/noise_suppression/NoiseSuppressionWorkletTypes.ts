@@ -4,7 +4,7 @@ import type {VoiceNoiseSuppressionBackend} from '@app/features/voice/utils/noise
 
 export type NoiseSuppressionWorkletBackend = Extract<
 	VoiceNoiseSuppressionBackend,
-	'gate' | 'speex' | 'rnnoise' | 'gtcrn'
+	'gate' | 'speex' | 'rnnoise' | 'gtcrn' | 'dpdfnet'
 >;
 
 export const NOISE_SUPPRESSION_WORKLET_PROCESSOR_NAMES: Readonly<Record<NoiseSuppressionWorkletBackend, string>> = {
@@ -12,4 +12,5 @@ export const NOISE_SUPPRESSION_WORKLET_PROCESSOR_NAMES: Readonly<Record<NoiseSup
 	speex: '@sapphi-red/web-noise-suppressor/speex',
 	rnnoise: '@sapphi-red/web-noise-suppressor/rnnoise',
 	gtcrn: '@sapphi-red/web-noise-suppressor/gtcrn',
+	dpdfnet: 'fluxer-dpdfnet',
 };
