@@ -95,6 +95,23 @@ export function applyVoiceSpeakPermissionToSelfMute(
 	return isVoiceSpeakPermissionDenied(guildId, channelId) || selfMute;
 }
 
+/**
+ * The self-mute to take from the gateway's echo of our own voice state.
+ *
+ * In a channel that denies Speak this client sends `self_mute: true` whatever the user chose
+ * (see applyVoiceSpeakPermissionToSelfMute). The echo of that forced mute must not be written
+ * back as the user's own mute, or it is saved as their default and they stay muted after they
+ * leave the channel. Returns undefined when the echo should leave the local mute alone.
+ */
+export function resolveEchoedSelfMute(
+	guildId: string | null | undefined,
+	channelId: string | null | undefined,
+	echoedSelfMute: boolean,
+): boolean | undefined {
+	if (echoedSelfMute && isVoiceSpeakPermissionDenied(guildId, channelId)) return undefined;
+	return echoedSelfMute;
+}
+
 export function shouldPrepareMicrophoneForVoiceConnect({
 	guildId,
 	channelId,

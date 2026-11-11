@@ -170,6 +170,7 @@ import {
 import {buildVoiceParticipantIdentity} from '@app/features/voice/utils/VoiceParticipantIdentity';
 import {
 	isVoiceServerMuteActive,
+	resolveEchoedSelfMute,
 	resolveVoiceStateSelfMute,
 	shouldPrepareMicrophoneForVoiceConnect,
 } from '@app/features/voice/utils/VoicePermissionUtils';
@@ -1867,7 +1868,10 @@ class MediaEngineFacade extends Store {
 				this.applyingGatewayVoiceStateEcho = true;
 				try {
 					LocalVoiceState.syncConnectionState(voiceState.connection_id, {
-						selfMute: ptmActive || pttActive || !applyServerState ? undefined : voiceState.self_mute,
+						selfMute:
+							ptmActive || pttActive || !applyServerState
+								? undefined
+								: resolveEchoedSelfMute(guildId, voiceState.channel_id, voiceState.self_mute),
 						selfDeaf: applyServerState ? voiceState.self_deaf : undefined,
 						selfVideo: applyServerState ? voiceState.self_video : undefined,
 						selfStream: applyServerState ? voiceState.self_stream : undefined,
