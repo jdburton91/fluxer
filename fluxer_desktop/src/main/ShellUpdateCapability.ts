@@ -34,8 +34,14 @@ interface ShellUpdateRuntime {
 	readonly platform: NodeJS.Platform;
 }
 
+// Fork patch (jdburton91/fluxer): a fork build never updates itself. Fluxer's update feed serves
+// the official build, which would replace this one and drop the fork's fixes without saying so.
+// Treating the build as unpackaged turns self-update off and points "check for updates" at the
+// fork's releases page (DOWNLOAD_PAGE_URL).
+const FORK_BUILD_SKIPS_SELF_UPDATE = true;
+
 function decideShellUpdatePlan(runtime: ShellUpdateRuntime): ShellUpdatePlan {
-	if (!runtime.packaged || runtime.channel === 'development') {
+	if (FORK_BUILD_SKIPS_SELF_UPDATE || !runtime.packaged || runtime.channel === 'development') {
 		return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'unpackaged'};
 	}
 	if (runtime.flatpak) {

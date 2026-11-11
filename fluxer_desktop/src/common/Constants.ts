@@ -23,9 +23,12 @@ export const CHANNEL_APP_URLS: Record<BuildChannel, string> = {
 	development: DEVELOPMENT_APP_URL,
 };
 export const LOCAL_DEVELOPMENT_INSTANCE_URL = BUILD_CHANNEL === 'development' ? DEVELOPMENT_APP_URL : null;
+// Fork patch (jdburton91/fluxer): fork builds send people to the fork's releases, not Fluxer's
+// downloads, so updating keeps the fork's fixes.
+const FORK_DOWNLOAD_PAGE_URL = 'https://github.com/jdburton91/fluxer/releases';
 export const DOWNLOAD_PAGE_URLS: Record<BuildChannel, string> = {
-	stable: 'https://fluxer.app/download',
-	canary: 'https://canary.fluxer.app/download',
+	stable: FORK_DOWNLOAD_PAGE_URL,
+	canary: FORK_DOWNLOAD_PAGE_URL,
 	development: 'http://localhost:8088/download',
 };
 export const STABLE_MIGRATED_APP_ORIGIN = 'https://fluxer.com';
