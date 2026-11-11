@@ -15,6 +15,7 @@ export const NOISE_SUPPRESSION_WORKLET_MODULE_URLS: Readonly<Record<NoiseSuppres
 	speex: speexWorkletUrl,
 	rnnoise: rnnoiseWorkletUrl,
 	gtcrn: gtcrnWorkletUrl,
+	dpdfnet: new URL('./dpdfnet/dpdfnetProcessor.worklet.js', import.meta.url).href,
 };
 
 export const NOISE_SUPPRESSION_WASM_URLS = {

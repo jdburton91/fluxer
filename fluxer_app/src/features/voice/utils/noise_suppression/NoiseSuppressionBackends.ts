@@ -8,6 +8,7 @@ export const VOICE_NOISE_SUPPRESSION_BACKENDS = [
 	'rnnoise',
 	'gtcrn',
 	'deep_filter',
+	'dpdfnet',
 ] as const;
 
 export type VoiceNoiseSuppressionBackend = (typeof VOICE_NOISE_SUPPRESSION_BACKENDS)[number];
@@ -85,6 +86,16 @@ const DESCRIPTORS: Readonly<Record<VoiceNoiseSuppressionBackend, NoiseSuppressio
 		browserNoiseSuppression: false,
 		preservesInputChannels: false,
 		supportedSampleRates: [44100, 48000],
+		requiresWasmSimd: true,
+		usesSuppressionStrength: true,
+	},
+	// Fork patch (jdburton91/fluxer): DPDFNet-2, run by onnxruntime-web in a worker.
+	dpdfnet: {
+		id: 'dpdfnet',
+		engine: 'worklet',
+		browserNoiseSuppression: false,
+		preservesInputChannels: false,
+		supportedSampleRates: [48000],
 		requiresWasmSimd: true,
 		usesSuppressionStrength: true,
 	},

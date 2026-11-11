@@ -295,7 +295,8 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 			label: getNoiseSuppressionChoiceLabel(i18n, backend),
 		}));
 	const stereoMicrophoneAvailable = isStereoMicrophoneChoiceAvailable(activeInputLabel);
-	const deepFilterActive = resolveVoiceProcessingFromStateForDeviceLabel(voiceSettings, activeInputLabel).deepFilter;
+	const activeProcessing = resolveVoiceProcessingFromStateForDeviceLabel(voiceSettings, activeInputLabel);
+	const strengthSliderActive = activeProcessing.deepFilter || activeProcessing.noiseSuppressionBackend === 'dpdfnet';
 	const deepFilterStrengthDb = voiceSettings.getDeepFilterStrengthDb();
 	const setPushToTalkEnabled = (enabled: boolean) => {
 		const mode = enabled ? 'voice_push_to_talk' : 'voice_activity';
@@ -460,10 +461,11 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 				data-flx={dataFlx}
 			/>
 		);
-	// Fork patch (jdburton91/fluxer): upstream fixes DeepFilterNet's noise reduction at 30 dB.
+	// Fork patch (jdburton91/fluxer): upstream fixes DeepFilterNet's noise reduction at 30 dB. The
+	// slider also sets how far the fork's DPDFNet choice may go.
 	// The labels are plain English so the patch does not touch the translation catalogues.
 	const renderDeepFilterStrengthSlider = () =>
-		deepFilterActive && (
+		strengthSliderActive && (
 			<div className={styles.sensitivitySliderWrapper} data-flx="user.voice-tab.deep-filter-strength-slider-wrapper">
 				<div className={styles.sliderLabelRow} data-flx="user.voice-tab.deep-filter-strength.slider-label-row">
 					<div className={styles.sliderLabel} data-flx="user.voice-tab.deep-filter-strength.slider-label">
@@ -478,8 +480,8 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 					/>
 				</div>
 				<p className={styles.pttSettingDescription} data-flx="user.voice-tab.deep-filter-strength.description">
-					How far DeepFilterNet turns background noise down. 30 dB is the usual setting. Higher removes more noise but
-					can make your voice sound thin; the top of the slider removes all the noise it can.
+					How far the filter turns background noise down. 30 dB is the usual setting. Higher removes more noise but can
+					make your voice sound thin; the top of the slider removes all the noise it can.
 				</p>
 				<Slider
 					value={deepFilterStrengthDb}

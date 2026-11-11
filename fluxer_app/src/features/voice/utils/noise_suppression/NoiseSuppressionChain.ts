@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import VoiceSettings from '@app/features/voice/state/VoiceSettings';
+import {isDpdfnetWorkerEvent} from '@app/features/voice/utils/noise_suppression/dpdfnet/DpdfnetWorkerProtocol';
 import {detectWasmSimdSupport} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
 import type * as NoiseSuppressionWorkletAssets from '@app/features/voice/utils/noise_suppression/NoiseSuppressionWorkletAssets';
 import {
 	NOISE_SUPPRESSION_WORKLET_PROCESSOR_NAMES,
 	type NoiseSuppressionWorkletBackend,
 } from '@app/features/voice/utils/noise_suppression/NoiseSuppressionWorkletTypes';
+import {reaction} from 'mobx';
 
 const logger = new Logger('NoiseSuppressionChain');
 const NOISE_GATE_OPEN_THRESHOLD_DB = -41.6;
 const NOISE_GATE_CLOSE_THRESHOLD_DB = -47.6;
 const NOISE_GATE_HOLD_MS = 180;
 const NOISE_SUPPRESSION_STARTUP_TIMEOUT_MS = 8000;
+/** DPDFNet downloads a 10 MB model and onnxruntime-web's wasm on first use, so it gets longer. */
+const DPDFNET_STARTUP_TIMEOUT_MS = 45_000;
 
 export interface NoiseSuppressionWorkletNode {
 	node: AudioWorkletNode;
@@ -57,6 +62,7 @@ function resolveWasmUrl(
 ): string | null {
 	switch (backend) {
 		case 'gate':
+		case 'dpdfnet':
 			return null;
 		case 'speex':
 			return assets.NOISE_SUPPRESSION_WASM_URLS.speex;
@@ -73,6 +79,7 @@ function buildProcessorOptions(
 	backend: NoiseSuppressionWorkletBackend,
 	wasmBinary: ArrayBuffer | null,
 ): Record<string, unknown> {
+	if (backend === 'dpdfnet') return {};
 	if (backend === 'gate') {
 		return {
 			openThreshold: NOISE_GATE_OPEN_THRESHOLD_DB,
@@ -161,7 +168,51 @@ function addWorkletModule(
 	return pending;
 }
 
+// Fork patch (jdburton91/fluxer): DPDFNet's model runs in a worker that lives as long as its node.
+const dpdfnetWorkers = new WeakMap<AudioWorkletNode, () => void>();
+
+function startDpdfnetWorker(node: AudioWorkletNode, signal: AbortSignal): Promise<void> {
+	const worker = new Worker(new URL('./dpdfnet/DpdfnetWorker.ts', import.meta.url), {type: 'module'});
+	const channel = new MessageChannel();
+	const stopFollowingStrength = reaction(
+		() => VoiceSettings.getDeepFilterStrengthDb(),
+		(attenLimDb) => worker.postMessage({type: 'set-atten-lim', attenLimDb}),
+	);
+	dpdfnetWorkers.set(node, () => {
+		stopFollowingStrength();
+		worker.postMessage({type: 'stop'});
+		worker.terminate();
+	});
+	return new Promise((resolve, reject) => {
+		const finish = (error?: Error) => {
+			worker.onmessage = null;
+			worker.onerror = null;
+			signal.removeEventListener('abort', onAbort);
+			if (error) reject(error);
+			else resolve();
+		};
+		const onAbort = () => finish(signal.reason instanceof Error ? signal.reason : new Error('DPDFNet startup aborted'));
+		if (signal.aborted) {
+			onAbort();
+			return;
+		}
+		signal.addEventListener('abort', onAbort, {once: true});
+		worker.onmessage = (event: MessageEvent) => {
+			if (!isDpdfnetWorkerEvent(event.data)) return;
+			if (event.data.type === 'ready') finish();
+			else finish(new Error(event.data.message));
+		};
+		worker.onerror = (event) => finish(new Error(`DPDFNet worker failed to load: ${event.message || 'unknown error'}`));
+		worker.postMessage({type: 'start', port: channel.port1, attenLimDb: VoiceSettings.getDeepFilterStrengthDb()}, [
+			channel.port1,
+		]);
+		node.port.postMessage({type: 'connect'}, [channel.port2]);
+	});
+}
+
 function closeWorkletNode(node: AudioWorkletNode): void {
+	dpdfnetWorkers.get(node)?.();
+	dpdfnetWorkers.delete(node);
 	node.port.onmessage = null;
 	node.onprocessorerror = null;
 	try {
@@ -201,7 +252,11 @@ async function startWorkletNode(
 		processorOptions: buildProcessorOptions(backend, wasmBinary),
 	});
 	try {
-		await awaitWorkletReady(node, backend, signal);
+		if (backend === 'dpdfnet') {
+			await Promise.all([awaitWorkletReady(node, backend, signal), startDpdfnetWorker(node, signal)]);
+		} else {
+			await awaitWorkletReady(node, backend, signal);
+		}
 	} catch (error) {
 		closeWorkletNode(node);
 		throw error;
@@ -218,9 +273,12 @@ export async function createNoiseSuppressionWorkletNode(
 	const controller = new AbortController();
 	const onAbort = () => controller.abort(options.signal.reason);
 	options.signal.addEventListener('abort', onAbort, {once: true});
-	const timeoutId = window.setTimeout(() => {
-		controller.abort(new Error(`Noise suppression worklet "${backend}" startup timed out`));
-	}, NOISE_SUPPRESSION_STARTUP_TIMEOUT_MS);
+	const timeoutId = window.setTimeout(
+		() => {
+			controller.abort(new Error(`Noise suppression worklet "${backend}" startup timed out`));
+		},
+		backend === 'dpdfnet' ? DPDFNET_STARTUP_TIMEOUT_MS : NOISE_SUPPRESSION_STARTUP_TIMEOUT_MS,
+	);
 	let node: AudioWorkletNode;
 	try {
 		node = await startWorkletNode(context, backend, controller.signal);
