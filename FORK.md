@@ -18,6 +18,7 @@ other services run the official images unchanged.
 | Fix | Upstream report |
 | --- | --- |
 | Leaving a channel that denies Speak (such as an AFK channel) no longer leaves you self-muted | [Feedback #4789](https://feedback.fluxer.com/p/4789) |
+| A "Noise suppression strength" slider in voice settings: DeepFilterNet's noise reduction, fixed upstream at 30 dB, can be set from 6 dB to no limit, and changes apply live | [Feedback #4791](https://feedback.fluxer.com/p/4791) |
 
 The official desktop app bundles its own copy of the web client, so these fixes reach people who
 use the instance in a browser.

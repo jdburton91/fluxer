@@ -61,6 +61,15 @@ export const WINDOWS_DEFAULT_PLAYBACK_DEVICE = 'default';
 const DEFAULT_WINDOWS_DESKTOP_AUDIO_DEVICES: ReadonlyArray<string> = [WINDOWS_DEFAULT_PLAYBACK_DEVICE];
 export const MAX_WINDOWS_DESKTOP_AUDIO_DEVICES = 16;
 const MAX_WINDOWS_DESKTOP_AUDIO_DEVICE_ID_LENGTH = 512;
+/** How far DeepFilterNet may turn noise down, in dB. Upstream fixes it at 30; the top of the range means no limit. */
+export const DEEP_FILTER_STRENGTH_DEFAULT_DB = 30;
+export const DEEP_FILTER_STRENGTH_MIN_DB = 6;
+export const DEEP_FILTER_STRENGTH_MAX_DB = 100;
+
+function clampDeepFilterStrengthDb(value: number): number {
+	if (!Number.isFinite(value)) return DEEP_FILTER_STRENGTH_DEFAULT_DB;
+	return Math.round(Math.max(DEEP_FILTER_STRENGTH_MIN_DB, Math.min(DEEP_FILTER_STRENGTH_MAX_DB, value)));
+}
 
 export type VoiceSettingsUpdate = Partial<{
 	inputDeviceId: string;
@@ -109,6 +118,7 @@ export type VoiceSettingsUpdate = Partial<{
 	screenShareBitrate: number | null;
 	vadThreshold: number;
 	vadAutoSensitivity: boolean;
+	deepFilterStrengthDb: number;
 
 	linuxAudioCaptureOnlySpeakers: boolean;
 	linuxAudioCaptureOnlyDefaultSpeakers: boolean;
@@ -478,6 +488,7 @@ class VoiceSettings {
 	screenShareScalabilityModePrefV2: ScreenShareScalabilityModePreference = DEFAULT_SCREEN_SHARE_SCALABILITY_MODE;
 	screenShareBitrate: number | null = null;
 	vadThreshold = 50;
+	deepFilterStrengthDb = DEEP_FILTER_STRENGTH_DEFAULT_DB;
 	vadAutoSensitivity = true;
 
 	linuxAudioCaptureOnlySpeakers = true;
@@ -536,6 +547,7 @@ class VoiceSettings {
 				getScreenShareBitrate: false,
 				getScreenShareBitrateBudget: false,
 				getVadThreshold: false,
+				getDeepFilterStrengthDb: false,
 				getVadAutoSensitivity: false,
 				getLinuxAudioCaptureOnlySpeakers: false,
 				getLinuxAudioCaptureOnlyDefaultSpeakers: false,
@@ -656,6 +668,7 @@ class VoiceSettings {
 				'screenShareBitrate',
 				'vadThreshold',
 				'vadAutoSensitivity',
+				'deepFilterStrengthDb',
 
 				'linuxAudioCaptureOnlySpeakers',
 				'linuxAudioCaptureOnlyDefaultSpeakers',
@@ -923,6 +936,10 @@ class VoiceSettings {
 		return this.vadThreshold;
 	}
 
+	getDeepFilterStrengthDb(): number {
+		return clampDeepFilterStrengthDb(this.deepFilterStrengthDb);
+	}
+
 	getVadAutoSensitivity(): boolean {
 		return this.vadAutoSensitivity;
 	}
@@ -1046,6 +1063,7 @@ class VoiceSettings {
 		if (validated.screenShareBitrate !== undefined) this.screenShareBitrate = validated.screenShareBitrate;
 		if (validated.vadThreshold !== undefined) this.vadThreshold = validated.vadThreshold;
 		if (validated.vadAutoSensitivity !== undefined) this.vadAutoSensitivity = validated.vadAutoSensitivity;
+		if (validated.deepFilterStrengthDb !== undefined) this.deepFilterStrengthDb = validated.deepFilterStrengthDb;
 
 		if (validated.linuxAudioCaptureOnlySpeakers !== undefined)
 			this.linuxAudioCaptureOnlySpeakers = validated.linuxAudioCaptureOnlySpeakers;
@@ -1182,6 +1200,7 @@ class VoiceSettings {
 					: validateScreenShareBitrate(data.screenShareBitrate),
 			vadThreshold: Math.max(0, Math.min(100, data.vadThreshold ?? this.vadThreshold)),
 			vadAutoSensitivity: data.vadAutoSensitivity ?? this.vadAutoSensitivity,
+			deepFilterStrengthDb: clampDeepFilterStrengthDb(data.deepFilterStrengthDb ?? this.deepFilterStrengthDb),
 
 			linuxAudioCaptureOnlySpeakers: data.linuxAudioCaptureOnlySpeakers ?? this.linuxAudioCaptureOnlySpeakers,
 			linuxAudioCaptureOnlyDefaultSpeakers:

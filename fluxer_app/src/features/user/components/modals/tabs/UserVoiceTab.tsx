@@ -41,6 +41,11 @@ import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import {supportsVoiceOutputDeviceSelection} from '@app/features/voice/engine/VoiceSharedAudioContext';
 import type VoiceSettings from '@app/features/voice/state/VoiceSettings';
 import {
+	DEEP_FILTER_STRENGTH_DEFAULT_DB,
+	DEEP_FILTER_STRENGTH_MAX_DB,
+	DEEP_FILTER_STRENGTH_MIN_DB,
+} from '@app/features/voice/state/VoiceSettings';
+import {
 	type ExternalAudioProcessorMatch,
 	findExternalProcessorForDevice,
 } from '@app/features/voice/utils/ExternalAudioProcessor';
@@ -72,7 +77,10 @@ import {
 	VOICE_OUTPUT_DEVICE_DESCRIPTOR,
 	VOICE_OUTPUT_VOLUME_DESCRIPTOR,
 } from '@app/features/voice/utils/VoiceMessageDescriptors';
-import type {VoiceProcessingMode} from '@app/features/voice/utils/VoiceProcessingProfile';
+import {
+	resolveVoiceProcessingFromStateForDeviceLabel,
+	type VoiceProcessingMode,
+} from '@app/features/voice/utils/VoiceProcessingProfile';
 import {VOICE_VOLUME_MAX_PERCENT} from '@app/features/voice/utils/VoiceVolumeUtils';
 import {msg, ph} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -287,6 +295,8 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 			label: getNoiseSuppressionChoiceLabel(i18n, backend),
 		}));
 	const stereoMicrophoneAvailable = isStereoMicrophoneChoiceAvailable(activeInputLabel);
+	const deepFilterActive = resolveVoiceProcessingFromStateForDeviceLabel(voiceSettings, activeInputLabel).deepFilter;
+	const deepFilterStrengthDb = voiceSettings.getDeepFilterStrengthDb();
 	const setPushToTalkEnabled = (enabled: boolean) => {
 		const mode = enabled ? 'voice_push_to_talk' : 'voice_activity';
 		if (enabled && !isNativeDesktop) {
@@ -450,6 +460,41 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 				data-flx={dataFlx}
 			/>
 		);
+	// Fork patch (jdburton91/fluxer): upstream fixes DeepFilterNet's noise reduction at 30 dB.
+	// The labels are plain English so the patch does not touch the translation catalogues.
+	const renderDeepFilterStrengthSlider = () =>
+		deepFilterActive && (
+			<div className={styles.sensitivitySliderWrapper} data-flx="user.voice-tab.deep-filter-strength-slider-wrapper">
+				<div className={styles.sliderLabelRow} data-flx="user.voice-tab.deep-filter-strength.slider-label-row">
+					<div className={styles.sliderLabel} data-flx="user.voice-tab.deep-filter-strength.slider-label">
+						Noise suppression strength
+					</div>
+					<SliderResetIconButton
+						canReset={canResetSliderValue(deepFilterStrengthDb, DEEP_FILTER_STRENGTH_DEFAULT_DB)}
+						onReset={() => VoiceSettingsCommands.update({deepFilterStrengthDb: DEEP_FILTER_STRENGTH_DEFAULT_DB})}
+						ariaLabel={resetSliderLabel}
+						dataFlx="user.voice-tab.deep-filter-strength.reset-button"
+						data-flx="user.user-voice-tab.deep-filter-strength.slider-reset-icon-button"
+					/>
+				</div>
+				<p className={styles.pttSettingDescription} data-flx="user.voice-tab.deep-filter-strength.description">
+					How far DeepFilterNet turns background noise down. 30 dB is the usual setting. Higher removes more noise but
+					can make your voice sound thin; the top of the slider removes all the noise it can.
+				</p>
+				<Slider
+					value={deepFilterStrengthDb}
+					defaultValue={deepFilterStrengthDb}
+					factoryDefaultValue={DEEP_FILTER_STRENGTH_DEFAULT_DB}
+					minValue={DEEP_FILTER_STRENGTH_MIN_DB}
+					maxValue={DEEP_FILTER_STRENGTH_MAX_DB}
+					step={1}
+					onValueRender={(value) => (value >= DEEP_FILTER_STRENGTH_MAX_DB ? 'No limit' : `${value} dB`)}
+					asValueChanges={(value) => VoiceSettingsCommands.update({deepFilterStrengthDb: value})}
+					onValueChange={(value) => VoiceSettingsCommands.update({deepFilterStrengthDb: value})}
+					data-flx="user.voice-tab.deep-filter-strength.slider"
+				/>
+			</div>
+		);
 	const renderCustomProfile = () => (
 		<div className={styles.profileSubSection} data-flx="user.voice-tab.render-custom-profile.profile-sub-section">
 			{renderPttControls()}
@@ -502,6 +547,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 				dataFlx="user.voice-tab.render-custom-profile.select.set-noise-suppression-method"
 				data-flx="user.user-voice-tab.render-custom-profile.compact-combobox-row.set-noise-suppression-method"
 			/>
+			{renderDeepFilterStrengthSlider()}
 			{renderStereoMicrophoneSwitch('user.voice-tab.render-custom-profile.switch.set-stereo-microphone')}
 			<Switch
 				label={i18n._(VOICE_ECHO_CANCELLATION_DESCRIPTOR)}
@@ -692,6 +738,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 						{voiceProcessingMode === 'voice' && (
 							<div className={styles.profileSubSection} data-flx="user.voice-tab.profile-sub-section">
 								{renderPttControls()}
+								{renderDeepFilterStrengthSlider()}
 								{renderAutoGainControlSwitch()}
 							</div>
 						)}
