@@ -16,6 +16,7 @@
 		"paths": {
 			"@app/*": ["./src/*"],
 			"onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm": ["./src/types/ort-wasm-asset.d.ts"],
+			"onnxruntime-web/ort-wasm-simd-threaded.wasm": ["./src/types/ort-wasm-asset.d.ts"],
 			"@sapphi-red/web-noise-suppressor/gtcrn.wasm": ["./src/types/url-asset.d.ts"],
 			"@sapphi-red/web-noise-suppressor/gtcrnWorklet.js": ["./src/types/url-asset.d.ts"],
 			"@sapphi-red/web-noise-suppressor/noiseGateWorklet.js": ["./src/types/url-asset.d.ts"],

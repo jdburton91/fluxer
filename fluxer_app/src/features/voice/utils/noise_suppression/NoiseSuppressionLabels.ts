@@ -34,6 +34,7 @@ const BACKEND_MODEL_NAMES: Readonly<Partial<Record<VoiceNoiseSuppressionBackend,
 	rnnoise: 'RNNoise',
 	gtcrn: 'GTCRN',
 	deep_filter: 'DeepFilterNet',
+	dpdfnet: 'DPDFNet',
 };
 
 const TRANSLATED_LABELS: Readonly<Partial<Record<VoiceNoiseSuppressionBackend, MessageDescriptor>>> = {

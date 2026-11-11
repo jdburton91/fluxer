@@ -188,6 +188,7 @@ export function formatMilliseconds(milliseconds: number, locale: string): string
 
 const ENHANCED_NOISE_SUPPRESSION_BACKENDS: ReadonlySet<VoiceNoiseSuppressionBackend> = new Set([
 	'deep_filter',
+	'dpdfnet',
 	'gtcrn',
 	'rnnoise',
 ]);
