@@ -304,12 +304,21 @@ jobs:
           cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
           --step build_app_windows
 
-      - name: Verify the packaged shell starts and boots its bundled renderer (Windows)
+      # Upstream's verify steps also wait for the module system's "served" log line, which a build
+      # with modules off never writes. This runs the same release check and requires what matters
+      # here: the window loads the bundled web client and reports this build's desktop and web
+      # versions (and the shell keeps running until the check stops it).
+      - name: Verify the packaged app boots its bundled web client (Windows)
         if: matrix.platform == 'windows'
         working-directory: ${{ env.WORKDIR }}/fluxer_desktop
-        run: >-
-          cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
-          --step verify_bundled_renderer_windows
+        shell: bash
+        run: |
+          set -uo pipefail
+          out=$(node scripts/release-check.mjs --app 'dist-electron/win-unpacked' --channel stable \
+            --expect-renderer "$BUILD_VERSION" --package-origin http://127.0.0.1:9 \
+            --app-arg=--disable-gpu --timeout-seconds 60 2>&1)
+          echo "$out"
+          grep -qF "the window loads $BUILD_VERSION and reports Stable Desktop $BUILD_VERSION, Web $BUILD_VERSION" <<<"$out"
 
       - name: Create portable ZIP (Windows)
         if: matrix.platform == 'windows'
@@ -344,12 +353,17 @@ jobs:
           cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
           --step build_app_linux
 
-      - name: Verify the packaged shell boots its bundled renderer (Linux)
+      - name: Verify the packaged app boots its bundled web client (Linux)
         if: matrix.platform == 'linux'
         working-directory: ${{ env.WORKDIR }}/fluxer_desktop
-        run: >-
-          cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
-          --step verify_bundled_renderer_linux
+        shell: bash
+        run: |
+          set -uo pipefail
+          out=$(xvfb-run -a node scripts/release-check.mjs --app dist-electron/linux-unpacked --channel stable \
+            --expect-renderer "$BUILD_VERSION" --package-origin http://127.0.0.1:9 \
+            --app-arg=--no-sandbox --app-arg=--disable-gpu --timeout-seconds 60 2>&1)
+          echo "$out"
+          grep -qF "the window loads $BUILD_VERSION and reports Stable Desktop $BUILD_VERSION, Web $BUILD_VERSION" <<<"$out"
 
       - name: Stage artifacts
         working-directory: ${{ env.WORKDIR }}/fluxer_desktop
