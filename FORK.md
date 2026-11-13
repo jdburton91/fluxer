@@ -33,8 +33,13 @@ ways:
 
 - **The web fixes above are built in.** The module system that would download Fluxer's
   official web client into the app is off.
-- **They never update themselves.** Fluxer's update feed would replace them with the official
-  build. "Check for updates" points to this fork's releases instead.
+- **They update from this fork, never from Fluxer.** Fluxer's update feed would replace them with
+  the official build. The AppImage checks this fork's releases at start and then hourly,
+  downloads a newer `desktop-<version>` release in the background, checks it against the SHA-256
+  digest GitHub lists for the file, and swaps it in place of itself: the new version runs at the
+  next start, or at once from "Update now". The Windows ZIP, `.deb`, `.rpm` and `.tar.gz` cannot
+  replace themselves, so they say when a newer release is out and download it (Windows) or open
+  its page.
 - **They are not code-signed.** Windows SmartScreen warns on first start ("More info", then
   "Run anyway"). There is no Windows installer, because Fluxer's packaging only makes signed ones.
 
@@ -42,7 +47,7 @@ Each release lists SHA-256 checksums. At sign-in, enter your instance's address 
 
 | Desktop-only change | Why |
 | --- | --- |
-| Self-update off; download links go to this fork | Keeps the fixes through updates |
+| Updates come from this fork's releases only (the AppImage installs them itself); download links go to this fork | Keeps the fixes through updates |
 
 ## Using it
 
