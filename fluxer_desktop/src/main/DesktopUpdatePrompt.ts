@@ -41,7 +41,7 @@ async function ask(options: MessageBoxOptions): Promise<number> {
 
 async function runUpdateCheck(): Promise<void> {
 	for (;;) {
-		let manualVersion: string | null = null;
+		let manual: {readonly version: string; readonly pageUrl?: string} | null = null;
 		try {
 			const state = await checkDesktopUpdateNow({manual: true});
 			if (state.updating === true) {
@@ -52,7 +52,7 @@ async function runUpdateCheck(): Promise<void> {
 				await offerDesktopUpdate();
 				return;
 			}
-			manualVersion = (await findNewerManualShell())?.version ?? null;
+			manual = await findNewerManualShell();
 		} catch (error) {
 			logger.warn('The update check from a native menu failed', error);
 			const retry = await ask({
@@ -68,8 +68,8 @@ async function runUpdateCheck(): Promise<void> {
 			}
 			return;
 		}
-		if (manualVersion != null) {
-			await offerManualUpdate(manualVersion);
+		if (manual != null) {
+			await offerManualUpdate(manual.version, manual.pageUrl);
 			return;
 		}
 		await ask({
@@ -104,8 +104,10 @@ function resolveManualUpdateOffer(): ManualUpdateOffer {
 	return {detail: t('desktop.update.managedDetail'), button: t('desktop.update.download'), url: DOWNLOAD_PAGE_URL};
 }
 
-async function offerManualUpdate(version: string): Promise<void> {
+async function offerManualUpdate(version: string, pageUrl?: string): Promise<void> {
 	const offer = resolveManualUpdateOffer();
+	// Fork patch (jdburton91/fluxer): open the new fork release's page rather than the releases list.
+	const url = pageUrl ?? offer.url;
 	const choice = await ask({
 		type: 'info',
 		message: t('desktop.update.manualMessage', {version}),
@@ -115,7 +117,7 @@ async function offerManualUpdate(version: string): Promise<void> {
 		cancelId: UpdatePromptChoice.SECONDARY,
 	});
 	if (choice === UpdatePromptChoice.PRIMARY) {
-		await openExternalDeduped(offer.url);
+		await openExternalDeduped(url);
 	}
 }
 

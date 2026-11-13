@@ -815,6 +815,12 @@ export {readBootSession};
 export async function finishMainAppStartup(): Promise<void> {
 	if (process.env.FLUXER_OFFLINE !== '1' && !shouldDisableModuleUpdatesForLaunch()) {
 		runStartupPhase('updater', () => registerUpdater(getMainWindow));
+		// Fork patch (jdburton91/fluxer): fork builds update from the fork's releases.
+		const {isModuleSystemBuildEnabled} = await import('@electron/common/ModuleSystem');
+		if (!isModuleSystemBuildEnabled()) {
+			const {armForkDesktopUpdate} = await import('@electron/main/ForkUpdate');
+			armForkDesktopUpdate();
+		}
 	}
 	await new Promise<void>((resolve) => setImmediate(resolve));
 	await new Promise<void>((resolve) => onMainWindowReady(resolve));

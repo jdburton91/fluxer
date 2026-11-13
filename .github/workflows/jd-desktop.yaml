@@ -3,7 +3,8 @@
 # Cut down from build-desktop.yaml: Linux x64 and Windows x64 only, no code signing, no macOS,
 # no Velopack installer (Fluxer's packaging refuses to make one unsigned), and no module
 # system, so the app always runs the web client built into it and never swaps in Fluxer's
-# official one. Self-update is patched off in the shell (ShellUpdateCapability.ts).
+# official one. Self-update is patched to read only this fork's releases (ForkUpdate.ts), so
+# publish each run as a release named desktop-<version>: AppImage builds install the newest one.
 #
 # Runs on a pushed tag named desktop-<version>, for example desktop-2026.1111.200000, or by hand.
 # The artifacts are attached to the run; publishing them as a release is a separate step.
