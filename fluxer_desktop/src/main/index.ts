@@ -616,6 +616,12 @@ if (launchConfigurationError) {
 					const {registerUpdater} = await import('@electron/main/Updater');
 					stopStartupIfQuitting();
 					registerUpdater(getMainWindow);
+					// Fork patch (jdburton91/fluxer): fork builds update from the fork's releases.
+					const {isModuleSystemBuildEnabled} = await import('@electron/common/ModuleSystem');
+					if (!isModuleSystemBuildEnabled()) {
+						const {armForkDesktopUpdate} = await import('@electron/main/ForkUpdate');
+						armForkDesktopUpdate();
+					}
 				}
 				app.on('activate', () => {
 					if (hasQuitStarted()) return;

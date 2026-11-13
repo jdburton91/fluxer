@@ -34,15 +34,23 @@ interface ShellUpdateRuntime {
 	readonly platform: NodeJS.Platform;
 }
 
-// Fork patch (jdburton91/fluxer): a fork build never updates itself. Fluxer's update feed serves
-// the official build, which would replace this one and drop the fork's fixes without saying so.
-// Treating the build as unpackaged turns self-update off and points "check for updates" at the
-// fork's releases page (DOWNLOAD_PAGE_URL).
-const FORK_BUILD_SKIPS_SELF_UPDATE = true;
+// Fork patch (jdburton91/fluxer): fork builds update only from the fork's own releases
+// (ForkUpdate.ts). Fluxer's routes (its update feed, Velopack, its package repository, Flathub)
+// would install the official build and drop the fork's fixes without saying so. A packaged
+// AppImage replaces itself; every other format (the Windows portable ZIP, .deb, .rpm, .tar.gz) is
+// told about the new release and downloads it by hand. Fork builds run with the module system
+// off, so Bootstrap.ts, which would run Fluxer's own AppImage updater, never starts.
+const FORK_BUILD_UPDATES_FROM_FORK = true;
 
 function decideShellUpdatePlan(runtime: ShellUpdateRuntime): ShellUpdatePlan {
-	if (FORK_BUILD_SKIPS_SELF_UPDATE || !runtime.packaged || runtime.channel === 'development') {
+	if (!runtime.packaged || runtime.channel === 'development') {
 		return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'unpackaged'};
+	}
+	if (FORK_BUILD_UPDATES_FROM_FORK) {
+		if (runtime.platform === 'linux' && !runtime.portable && runtime.appImage != null) {
+			return {capability: ShellUpdateCapability.SELF_UPDATE, updater: 'appimage', target: runtime.appImage};
+		}
+		return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'platform'};
 	}
 	if (runtime.flatpak) {
 		return {

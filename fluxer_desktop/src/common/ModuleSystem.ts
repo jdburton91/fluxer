@@ -6,6 +6,12 @@ import {fileURLToPath} from 'node:url';
 
 const MODULE_SYSTEM_BUILD_ENABLED = process.env.FLUXER_MODULES === '1';
 
+// Fork patch (jdburton91/fluxer): the main process arms the fork's updater only when the build
+// has the module system off, as every fork build does.
+export function isModuleSystemBuildEnabled(): boolean {
+	return MODULE_SYSTEM_BUILD_ENABLED;
+}
+
 const OFFLINE_RENDERER_DIRECTORY_SEGMENTS: ReadonlyArray<string> = Object.freeze(['..', 'renderer']);
 const OFFLINE_RENDERER_INDEX_NAME = 'index.html';
 const OFFLINE_RENDERER_VERSION_NAME = 'version.json';

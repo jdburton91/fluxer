@@ -3,6 +3,8 @@ import {isRecord} from '@fluxer/record_utils/src/RecordGuards';
 
 import {errorMessage as getErrorMessage} from '@electron/common/ErrorMessage';
 import {checkDesktopUpdateNow} from '@electron/main/DesktopUpdateGate';
+import {findForkDesktopAsset} from '@electron/main/ForkReleaseFeed';
+import {fetchLatestForkDesktopRelease} from '@electron/main/ForkUpdate';
 import {getFlatpakAppId} from '@electron/main/LinuxSandbox';
 import {compareShellVersions} from '@electron/main/ModuleVersion';
 import {MANUAL_DESKTOP_FORMATS, type ManualDesktopFormat} from '@electron/main/ShellDownloadFormats';
@@ -130,6 +132,25 @@ async function fetchFlathubLatest(): Promise<ManualLatestInfo> {
 	return {version, pubDate: null, files: {}};
 }
 
+// Fork patch (jdburton91/fluxer): fork builds read the fork's releases, not Fluxer's feed, so a
+// "new version" notice never points at the official build. On Windows the notice downloads the
+// new portable ZIP; elsewhere it opens the release page.
+const FORK_BUILD_READS_FORK_RELEASES = true;
+
+async function fetchForkLatest(forceRefresh: boolean): Promise<ManualLatestInfo> {
+	const release = await fetchLatestForkDesktopRelease({forceRefresh});
+	if (release == null) {
+		throw new Error('The fork has no published desktop release');
+	}
+	const zip = process.platform === 'win32' ? findForkDesktopAsset(release, 'windows-zip', process.arch) : null;
+	return {
+		version: release.version,
+		pubDate: release.publishedAt,
+		pageUrl: release.pageUrl,
+		files: zip == null ? {} : {zip: {url: zip.url, sha256: zip.sha256}},
+	};
+}
+
 async function fetchManualLatest(options: {forceRefresh?: boolean} = {}): Promise<ManualLatestInfo> {
 	const now = Date.now();
 	if (!options.forceRefresh && manualLatestCache && now - manualLatestCache.at < MANUAL_CACHE_TTL_MS) {
@@ -137,7 +158,12 @@ async function fetchManualLatest(options: {forceRefresh?: boolean} = {}): Promis
 	}
 	const plan = resolveShellUpdatePlan();
 	const fromFlathub = plan.capability === ShellUpdateCapability.MANAGED_PACKAGE && plan.releaseFeed === 'flathub';
-	const info = fromFlathub ? await fetchFlathubLatest() : await fetchFluxerLatest();
+	let info: ManualLatestInfo;
+	if (FORK_BUILD_READS_FORK_RELEASES) {
+		info = await fetchForkLatest(options.forceRefresh === true);
+	} else {
+		info = fromFlathub ? await fetchFlathubLatest() : await fetchFluxerLatest();
+	}
 	manualLatestCache = {at: now, info};
 	return info;
 }
