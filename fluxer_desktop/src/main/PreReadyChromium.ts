@@ -23,6 +23,7 @@ import {
 	shouldDisableHardwareAccelerationForLaunch,
 } from '@electron/main/DesktopDebugInfo';
 import {isSafeModeLaunch} from '@electron/main/LaunchOptions';
+import {applyLinuxVideoEncodeGpu} from '@electron/main/LinuxVideoEncodeGpu';
 import {app} from 'electron';
 import log from 'electron-log';
 
@@ -65,5 +66,9 @@ export function applyPreReadyChromiumConfiguration(channel: BuildChannel, argv: 
 	appendConfiguredChromiumSwitches(getConfiguredChromiumSwitches());
 	if (!isSafeModeLaunch(argv)) {
 		appendLinuxChromiumFlagsConfig(channel);
+	}
+	// Fork patch (jdburton91/fluxer): after the flags config, so a --render-node-override there wins.
+	if (!disableHardwareAcceleration && !isSafeModeLaunch(argv)) {
+		applyLinuxVideoEncodeGpu();
 	}
 }
