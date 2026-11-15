@@ -23,6 +23,7 @@ import {
 } from '@app/features/voice/utils/VideoQualityEntitlement';
 import {areVoiceBackgroundsAvailable} from '@app/features/voice/utils/VoiceBackgroundAvailability';
 import {
+	DEFAULT_VAD_THRESHOLD,
 	DEFAULT_VOICE_PROCESSING_MODE,
 	type VoiceProcessingMode,
 } from '@app/features/voice/utils/VoiceProcessingProfile';
@@ -404,6 +405,22 @@ function applyDeepFilterDefaultRetiredMigrationV1(parsed: Record<string, unknown
 	return true;
 }
 
+// Fork patch (jdburton91/fluxer): move every install once onto the fork's voice defaults (the
+// Custom profile, DPDFNet, a fixed 40% activity threshold), whatever was chosen before. The flag
+// keeps it from running again, so anything changed afterwards stays.
+function applyJdForkVoiceDefaultsMigrationV1(parsed: Record<string, unknown>): boolean {
+	if (parsed.jdForkVoiceDefaultsMigratedV1 === true) {
+		return false;
+	}
+	parsed.voiceProcessingMode = DEFAULT_VOICE_PROCESSING_MODE;
+	parsed.voiceProcessingModeByDeviceLabel = {};
+	parsed.noiseSuppressionBackendPrefV1 = 'dpdfnet';
+	parsed.vadAutoSensitivity = false;
+	parsed.vadThreshold = DEFAULT_VAD_THRESHOLD;
+	parsed.jdForkVoiceDefaultsMigratedV1 = true;
+	return true;
+}
+
 function validateNoiseSuppressionBackend(value: unknown): VoiceNoiseSuppressionBackend | null {
 	return isVoiceNoiseSuppressionBackend(value) ? value : null;
 }
@@ -481,15 +498,16 @@ class VoiceSettings {
 	screenShareAv1OptOutMigratedV1 = false;
 	screenShareHevcOptOutMigratedV1 = false;
 	deepFilterDefaultRetiredMigratedV1 = false;
+	jdForkVoiceDefaultsMigratedV1 = false;
 	screenShareContentHintPrefV2: ScreenShareContentHint = DEFAULT_SCREEN_SHARE_CONTENT_HINT;
 	screenShareContentHintDefaultMigratedV1 = false;
 	screenShareSoftwareQualityRetiredV1 = false;
 	screenShareEncoderModePrefV2: ScreenShareEncoderMode = DEFAULT_SCREEN_SHARE_ENCODER_MODE;
 	screenShareScalabilityModePrefV2: ScreenShareScalabilityModePreference = DEFAULT_SCREEN_SHARE_SCALABILITY_MODE;
 	screenShareBitrate: number | null = null;
-	vadThreshold = 50;
+	vadThreshold = DEFAULT_VAD_THRESHOLD;
 	deepFilterStrengthDb = DEEP_FILTER_STRENGTH_DEFAULT_DB;
-	vadAutoSensitivity = true;
+	vadAutoSensitivity = false;
 
 	linuxAudioCaptureOnlySpeakers = true;
 	linuxAudioCaptureOnlyDefaultSpeakers = true;
@@ -595,6 +613,7 @@ class VoiceSettings {
 			changed = applyScreenShareBackupCodecModeRetiredMigrationV1(parsed) || changed;
 			changed = applyLegacyNoiseSuppressionNoneMigrationV1(parsed) || changed;
 			changed = applyDeepFilterDefaultRetiredMigrationV1(parsed) || changed;
+			changed = applyJdForkVoiceDefaultsMigrationV1(parsed) || changed;
 			if (changed) {
 				AppStorage.setItem('VoiceSettings', JSON.stringify(parsed));
 			}
@@ -603,6 +622,7 @@ class VoiceSettings {
 			this.screenShareHevcOptOutMigratedV1 = parsed.screenShareHevcOptOutMigratedV1 === true;
 			this.manualAudioSourcesOptOutResetMigratedV1 = parsed.manualAudioSourcesOptOutResetMigratedV1 === true;
 			this.deepFilterDefaultRetiredMigratedV1 = parsed.deepFilterDefaultRetiredMigratedV1 === true;
+			this.jdForkVoiceDefaultsMigratedV1 = parsed.jdForkVoiceDefaultsMigratedV1 === true;
 		} catch (error) {
 			logger.warn('Failed to migrate persisted voice settings:', error);
 		}
@@ -660,6 +680,7 @@ class VoiceSettings {
 				'screenShareAv1OptOutMigratedV1',
 				'screenShareHevcOptOutMigratedV1',
 				'deepFilterDefaultRetiredMigratedV1',
+				'jdForkVoiceDefaultsMigratedV1',
 				'screenShareContentHintPrefV2',
 				'screenShareContentHintDefaultMigratedV1',
 				'screenShareSoftwareQualityRetiredV1',

@@ -32,7 +32,10 @@ export interface ResolvedVoiceProcessing {
 	stereoCapture: boolean;
 }
 
-export const DEFAULT_VOICE_PROCESSING_MODE: VoiceProcessingMode = 'voice';
+// Fork patch (jdburton91/fluxer): fork builds start on the Custom profile with a fixed activity
+// threshold of 40% (upstream: the Voice profile, which always sets the threshold itself, and 50%).
+export const DEFAULT_VOICE_PROCESSING_MODE: VoiceProcessingMode = 'custom';
+export const DEFAULT_VAD_THRESHOLD = 40;
 
 function resolveBaseVoiceProcessing(
 	settings: VoiceProcessingSettingsLike,
