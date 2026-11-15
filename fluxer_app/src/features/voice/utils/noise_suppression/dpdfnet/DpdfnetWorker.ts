@@ -30,7 +30,7 @@ type DpdfnetWorkerScope = DedicatedWorkerGlobalScope & {close(): void};
 const scope = self as unknown as DpdfnetWorkerScope;
 // onnxruntime-web resolves its own files against the bundler's base URL, which a worker has to set
 // itself (as WebCameraEffectWorker does); without it the session fails with "Invalid URL".
-__webpack_base_uri__ = scope.location.href;
+__webpack_base_uri__ = self.location.href;
 const MODEL_MAX_BYTES = 16 * 1024 * 1024;
 /** Hops waiting for the model beyond this are dropped, so a slow device falls behind by at most 60 ms. */
 const MAX_PENDING_HOPS = 6;
