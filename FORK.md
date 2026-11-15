@@ -21,6 +21,7 @@ desktop app (`fluxer_desktop`). All other services run the official images uncha
 | A "Noise suppression strength" slider in voice settings: DeepFilterNet's noise reduction, fixed upstream at 30 dB, can be set from 6 dB to no limit, and changes apply live | [Feedback #4791](https://feedback.fluxer.com/p/4791) |
 | A "DPDFNet" noise suppression choice: Ceva's DPDFNet-2 48 kHz model (Apache-2.0), run by onnxruntime-web in a worker, about 70 ms of delay, strength set by the same slider | None yet |
 | Voice defaults: the Custom profile with DPDFNet noise suppression and a fixed 40% activity threshold (upstream: the Voice profile, RNNoise, an automatic threshold). Every install is moved onto them once; later changes stay | Not a bug; a choice for this instance |
+| A "Toggle streaming" shortcut (Keybinds, add a keybind; it can be global): starts a stream (opens the source picker and, in the desktop app, brings the window forward) or stops the current one | None yet |
 
 The official desktop app bundles its own copy of the web client, so it does not get these fixes.
 Use the fork's desktop app instead (below).
@@ -49,6 +50,7 @@ Each release lists SHA-256 checksums. At sign-in, enter your instance's address 
 | Desktop-only change | Why |
 | --- | --- |
 | Updates come from this fork's releases only (the AppImage installs them itself); download links go to this fork | Keeps the fixes through updates |
+| The web client can ask for the main window to be shown and focused (used by the stream shortcut) | Lets the shortcut work while the app is in the background |
 
 ## Using it
 

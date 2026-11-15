@@ -368,6 +368,8 @@ export interface ElectronAPI {
 	windowIsMaximized?(): Promise<boolean>;
 	popoutSetAlwaysOnTop?(key: string, flag: boolean): Promise<boolean>;
 	popoutFocus?(key: string): Promise<boolean>;
+	// Fork patch (jdburton91/fluxer): show and focus the main window (the stream shortcut uses it).
+	showMainWindow?(): Promise<void>;
 	cssEditorWindow?: true;
 	openVoiceDebugEventSinkPopout?(entries: Array<DesktopVoiceDebugEventSinkEntry>): Promise<void>;
 	appendVoiceDebugEventSinkEntries?(entries: Array<DesktopVoiceDebugEventSinkEntry>): void;

@@ -294,6 +294,7 @@ export interface ElectronAPI {
 
 	popoutSetAlwaysOnTop: (key: string, flag: boolean) => Promise<boolean>;
 	popoutFocus: (key: string) => Promise<boolean>;
+	showMainWindow: () => Promise<void>;
 	cssEditorWindow: true;
 	openVoiceDebugEventSinkPopout: (entries: Array<DesktopVoiceDebugEventSinkEntry>) => Promise<void>;
 	appendVoiceDebugEventSinkEntries: (entries: Array<DesktopVoiceDebugEventSinkEntry>) => void;

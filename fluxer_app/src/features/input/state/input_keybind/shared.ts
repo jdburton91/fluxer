@@ -343,6 +343,11 @@ export const TOGGLE_CAMERA_DESCRIPTOR = msg({
 	message: 'Toggle camera',
 	comment: 'Keyboard shortcut action label shown in the shortcuts list and keybind editor. Keep short, sentence case.',
 });
+// Fork patch (jdburton91/fluxer): label for the stream toggle shortcut.
+export const TOGGLE_STREAM_DESCRIPTOR = msg({
+	message: 'Toggle streaming',
+	comment: 'Keyboard shortcut action label shown in the shortcuts list and keybind editor. Keep short, sentence case.',
+});
 export const SWITCH_VOICE_CHANNEL_DESCRIPTOR = msg({
 	message: 'Switch voice channel',
 	comment: 'Keyboard shortcut action label shown in the shortcuts list and keybind editor. Keep short, sentence case.',

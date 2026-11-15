@@ -100,6 +100,7 @@ import {
 	TOGGLE_PINNED_MESSAGES_DESCRIPTOR,
 	TOGGLE_QUICK_SWITCHER_DESCRIPTOR,
 	TOGGLE_SAVED_MEDIA_DESCRIPTOR,
+	TOGGLE_STREAM_DESCRIPTOR,
 	TOGGLE_THE_EMOJI_PICKER_DESCRIPTOR,
 	TOGGLE_THE_GIF_PICKER_DESCRIPTOR,
 	TOGGLE_THE_INBOX_DESCRIPTOR,
@@ -897,6 +898,15 @@ const getDefaultKeybinds = (
 		{
 			action: 'voice_toggle_camera',
 			label: i18n._(TOGGLE_CAMERA_DESCRIPTOR),
+			combo: {key: '', enabled: true, global: true},
+			allowGlobal: true,
+			assignable: true,
+			section: 'voice_and_video',
+			hideFromDefaults: true,
+		},
+		{
+			action: 'voice_toggle_stream',
+			label: i18n._(TOGGLE_STREAM_DESCRIPTOR),
 			combo: {key: '', enabled: true, global: true},
 			allowGlobal: true,
 			assignable: true,
