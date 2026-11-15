@@ -9,6 +9,8 @@ export const GLOBAL_SHORTCUT_ACTIONS = [
 	'voice_priority_vad',
 	'voice_toggle_vad',
 	'voice_toggle_camera',
+	// Fork patch (jdburton91/fluxer): offered to the system shortcut list too.
+	'voice_toggle_stream',
 	'voice_switch_channel',
 	'voice_disconnect',
 	'system_open_account_switcher',
@@ -32,6 +34,7 @@ export const GLOBAL_SHORTCUT_DEFAULT_DESCRIPTIONS: Readonly<Record<GlobalShortcu
 	voice_priority_vad: 'Voice activity priority',
 	voice_toggle_vad: 'Toggle voice activity',
 	voice_toggle_camera: 'Toggle camera',
+	voice_toggle_stream: 'Toggle streaming',
 	voice_switch_channel: 'Switch voice channel',
 	voice_disconnect: 'Disconnect from voice',
 	system_open_account_switcher: 'Open the account switcher',
