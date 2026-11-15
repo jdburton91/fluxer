@@ -47,6 +47,7 @@ import {getUnreadThreadIds} from '@app/features/threads/utils/ThreadViewUtils';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
 import * as TextCopyCommands from '@app/features/ui/commands/TextCopyCommands';
+import {getElectronAPI} from '@app/features/ui/utils/NativeUtils';
 import {openUserSettingsModal} from '@app/features/user/commands/UserSettingsModalCommands';
 import Users from '@app/features/user/state/Users';
 import {openAccountGateFlow} from '@app/features/user/utils/AccountGatePresentation';
@@ -257,6 +258,27 @@ export function registerDefaultKeybindHandlers(host: HandlerHost, i18n: I18n): v
 		void VoiceRuntime.engine
 			?.toggleCameraFromKeybind()
 			.catch((error) => host.logger.error('voice_toggle_camera keybind failed', error));
+	});
+	// Fork patch (jdburton91/fluxer): start or stop streaming from a shortcut, like the call bar's
+	// stream button. Starting brings the window forward, since the source picker opens in it.
+	host.register('voice_toggle_stream', ({type}) => {
+		if (type !== 'press') return;
+		const engine = VoiceRuntime.engine;
+		if (!engine?.connected) return;
+		if (LocalVoiceState.getSelfStream()) {
+			void engine
+				.setScreenShareEnabled(false)
+				.catch((error) => host.logger.error('voice_toggle_stream keybind failed to stop the stream', error));
+			return;
+		}
+		const channelId = engine.channelId;
+		if (engine.guildId && channelId && !Permission.can(Permissions.STREAM, {channelId})) return;
+		void getElectronAPI()
+			?.showMainWindow?.()
+			.catch((error: unknown) => host.logger.warn('voice_toggle_stream could not bring the window forward', error));
+		void import('@app/features/voice/components/modals/ScreenSharePickerModal')
+			.then(({openScreenSharePickerModal}) => openScreenSharePickerModal())
+			.catch((error) => host.logger.error('voice_toggle_stream keybind failed to start a stream', error));
 	});
 	host.register('voice_switch_channel', ({type}) => {
 		if (type !== 'press') return;

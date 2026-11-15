@@ -14,6 +14,7 @@ const VOICE_CALL_FULLSCREEN_ALLOWED_ACTIONS = new Set<KeybindCommand>([
 	'voice_priority_vad',
 	'voice_toggle_vad',
 	'voice_toggle_camera',
+	'voice_toggle_stream',
 	'voice_disconnect',
 ]);
 export const isKeybindAllowedDuringVoiceCallFullscreen = (action: KeybindCommand): boolean =>

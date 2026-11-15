@@ -24,6 +24,7 @@ export const FEATURED_CUSTOM_KEYBIND_ACTIONS: ReadonlyArray<KeybindCommand> = [
 	'voice_toggle_deafen',
 	'voice_toggle_vad',
 	'voice_toggle_camera',
+	'voice_toggle_stream',
 	'voice_switch_channel',
 	'nav_history_back',
 	'nav_history_forward',

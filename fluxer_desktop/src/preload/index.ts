@@ -526,6 +526,7 @@ const api: ElectronAPI = {
 	popoutSetAlwaysOnTop: (key: string, flag: boolean): Promise<boolean> =>
 		ipcRenderer.invoke('popout:set-always-on-top', key, flag),
 	popoutFocus: (key: string): Promise<boolean> => ipcRenderer.invoke('popout:focus', key),
+	showMainWindow: (): Promise<void> => ipcRenderer.invoke('main-window:show'),
 	cssEditorWindow: true,
 	openVoiceDebugEventSinkPopout: (entries: Array<DesktopVoiceDebugEventSinkEntry>): Promise<void> =>
 		ipcRenderer.invoke('voice-debug-event-sink:open', entries),

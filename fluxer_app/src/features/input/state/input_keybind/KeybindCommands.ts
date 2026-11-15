@@ -84,6 +84,7 @@ const KEYBIND_COMMAND_VALUES = [
 	'voice_priority_vad',
 	'voice_toggle_vad',
 	'voice_toggle_camera',
+	'voice_toggle_stream',
 	'voice_switch_channel',
 	'voice_disconnect',
 	'system_toggle_settings',
