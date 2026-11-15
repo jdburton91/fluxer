@@ -411,6 +411,12 @@ export function registerIpcHandlers(): void {
 		}
 		return setVoicePopoutAlwaysOnTop(key, flag);
 	});
+	// Fork patch (jdburton91/fluxer): the stream shortcut brings the main window forward before it
+	// opens the source picker there.
+	ipcMain.handle('main-window:show', (event): void => {
+		requirePrivilegedRendererDocumentSender(event, 'main-window:show');
+		showWindow();
+	});
 	ipcMain.handle('popout:focus', (_event, key: unknown): boolean => {
 		if (typeof key !== 'string') {
 			return false;
