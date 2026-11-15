@@ -78,6 +78,7 @@ import {
 	VOICE_OUTPUT_VOLUME_DESCRIPTOR,
 } from '@app/features/voice/utils/VoiceMessageDescriptors';
 import {
+	DEFAULT_VAD_THRESHOLD,
 	resolveVoiceProcessingFromStateForDeviceLabel,
 	type VoiceProcessingMode,
 } from '@app/features/voice/utils/VoiceProcessingProfile';
@@ -517,8 +518,8 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 							<Trans>Activity threshold</Trans>
 						</div>
 						<SliderResetIconButton
-							canReset={canResetSliderValue(vadThreshold, 50)}
-							onReset={() => VoiceSettingsCommands.update({vadThreshold: 50})}
+							canReset={canResetSliderValue(vadThreshold, DEFAULT_VAD_THRESHOLD)}
+							onReset={() => VoiceSettingsCommands.update({vadThreshold: DEFAULT_VAD_THRESHOLD})}
 							ariaLabel={resetSliderLabel}
 							dataFlx="user.voice-tab.render-custom-profile.reset-button.vad-threshold"
 							data-flx="user.user-voice-tab.render-custom-profile.slider-reset-icon-button"
@@ -527,7 +528,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 					<Slider
 						value={vadThreshold}
 						defaultValue={vadThreshold}
-						factoryDefaultValue={50}
+						factoryDefaultValue={DEFAULT_VAD_THRESHOLD}
 						minValue={0}
 						maxValue={100}
 						step={1}

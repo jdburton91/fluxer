@@ -11,7 +11,9 @@ import {
 import type {ResolvedVoiceProcessing} from '@app/features/voice/utils/VoiceProcessingProfile';
 
 const NOISE_SUPPRESSION_SAMPLE_RATE = 48000;
-const DEFAULT_NOISE_SUPPRESSION_BACKEND: VoiceNoiseSuppressionBackend = 'rnnoise';
+// Fork patch (jdburton91/fluxer): DPDFNet is the default (upstream: RNNoise). A browser that cannot run
+// it falls back through selectUsableNoiseSuppressionBackend as before.
+const DEFAULT_NOISE_SUPPRESSION_BACKEND: VoiceNoiseSuppressionBackend = 'dpdfnet';
 
 export function readNoiseSuppressionRuntimeCapabilities(): NoiseSuppressionRuntimeCapabilities {
 	return {
