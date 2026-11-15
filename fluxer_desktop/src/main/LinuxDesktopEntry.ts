@@ -25,6 +25,7 @@ import {
 import {isDirectMessagesAvailable, onDirectMessagesAvailabilityChange, TASK_ARG_PREFIX} from '@electron/main/JumpList';
 import {getStableLinuxLaunchPath} from '@electron/main/LinuxLaunchPath';
 import {isFlatpakRuntime} from '@electron/main/LinuxSandbox';
+import {getLinuxVideoEncodeLaunchEnvPrefix} from '@electron/main/LinuxVideoEncodeGpu';
 import {getNativeLocale, t} from '@electron/main/MainI18n';
 import {app} from 'electron';
 
@@ -136,7 +137,7 @@ function installHicolorIcons(): void {
 }
 
 function buildDesktopActionExecLine(execPath: string, taskId: (typeof DESKTOP_ACTIONS)[number]['id']): string {
-	return `${quoteExecArg(execPath)} ${TASK_ARG_PREFIX}${taskId} %U`;
+	return `${getLinuxVideoEncodeLaunchEnvPrefix()}${quoteExecArg(execPath)} ${TASK_ARG_PREFIX}${taskId} %U`;
 }
 
 function buildDesktopActionEntries(execPath: string): Array<string> {
@@ -163,7 +164,8 @@ function buildLocalizedEntryLines(key: string, defaultValue: string, localizedVa
 }
 
 function buildDesktopFileBody(execPath: string, hidden: boolean): string {
-	const execLine = `${quoteExecArg(execPath)} %U`;
+	// Fork patch (jdburton91/fluxer): see LinuxVideoEncodeGpu.ts.
+	const execLine = `${getLinuxVideoEncodeLaunchEnvPrefix()}${quoteExecArg(execPath)} %U`;
 	return [
 		'[Desktop Entry]',
 		GENERATED_MARKER,
