@@ -52,7 +52,7 @@ Each release lists SHA-256 checksums. At sign-in, enter your instance's address 
 | Updates come from this fork's releases only (the AppImage installs them itself); download links go to this fork | Keeps the fixes through updates |
 | The web client can ask for the main window to be shown and focused (used by the stream shortcut) | Lets the shortcut work while the app is in the background |
 | "Toggle streaming" is also offered to the system's shortcut settings (on Linux, the desktop's global shortcuts list) | Upstream's list of system shortcuts leaves it out |
-| Linux with an NVIDIA card plus built-in Intel or AMD graphics: video encoding for screen share uses the built-in graphics (VA-API), when its driver is installed. Opt out with `FLUXER_DISABLE_IGPU_VIDEO_ENCODE=1` | NVIDIA's VA-API driver only decodes, so streams fell back to slow software encoding |
+| Linux with an NVIDIA card plus built-in Intel or AMD graphics: video encoding for screen share uses the built-in graphics (VA-API), when its driver is installed. The app's own menu entry and autostart entry start it with the matching `LIBVA_DRIVER_NAME`; started another way with `LIBVA_DRIVER_NAME=nvidia`, it keeps software encoding. Opt out with `FLUXER_DISABLE_IGPU_VIDEO_ENCODE=1` | NVIDIA's VA-API driver only decodes, so streams fell back to slow software encoding |
 
 ## Using it
 

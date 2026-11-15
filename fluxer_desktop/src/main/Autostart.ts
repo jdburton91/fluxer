@@ -24,6 +24,7 @@ import {
 } from '@electron/main/LinuxDesktopEntry';
 import {getStableLinuxLaunchPath} from '@electron/main/LinuxLaunchPath';
 import {isFlatpakRuntime} from '@electron/main/LinuxSandbox';
+import {getLinuxVideoEncodeLaunchEnvPrefix} from '@electron/main/LinuxVideoEncodeGpu';
 import {t} from '@electron/main/MainI18n';
 import {loadOptionalNativeAddon} from '@electron/main/NativeAddon';
 import {app, ipcMain} from 'electron';
@@ -361,7 +362,8 @@ function linuxDesktopEntryTargetsExistingCommand(entry: Map<string, string>): bo
 
 function buildLinuxDesktopFileContents(): string {
 	const execPath = getStableLinuxLaunchPath();
-	const execLine = `${quoteDesktopExecArg(execPath)} ${AUTOSTART_LAUNCH_ARG}`;
+	// Fork patch (jdburton91/fluxer): see LinuxVideoEncodeGpu.ts.
+	const execLine = `${getLinuxVideoEncodeLaunchEnvPrefix()}${quoteDesktopExecArg(execPath)} ${AUTOSTART_LAUNCH_ARG}`;
 	return [
 		'[Desktop Entry]',
 		GENERATED_MARKER,
@@ -588,13 +590,20 @@ async function repairLinuxAutostartEntry(): Promise<void> {
 	if (entry.get('StartupWMClass')?.trim() !== LINUX_STARTUP_WM_CLASS) return;
 	if (desktopEntryBoolean(entry.get('Hidden'))) return;
 	if (desktopEntryDisabled(entry.get('X-GNOME-Autostart-enabled'))) return;
-	if (linuxDesktopEntryTargetsExistingCommand(entry)) return;
+	// Fork patch (jdburton91/fluxer): bring a generated entry's launch line up to date (it can gain
+	// an environment prefix, see LinuxVideoEncodeGpu.ts).
+	const desiredExec = tryParseDesktopEntry(buildLinuxDesktopFileContents()).get('Exec');
+	const execOutdated = contents.includes(GENERATED_MARKER) && entry.get('Exec') !== desiredExec;
+	if (!execOutdated && linuxDesktopEntryTargetsExistingCommand(entry)) return;
 	if (!commandExists(getStableLinuxLaunchPath())) return;
 	try {
 		await enableLinuxAutostart();
-		log.info('[Autostart] Rewrote a Linux autostart entry whose command no longer exists', {
-			execPath: getStableLinuxLaunchPath(),
-		});
+		log.info(
+			execOutdated
+				? '[Autostart] Rewrote a generated Linux autostart entry with an outdated launch line'
+				: '[Autostart] Rewrote a Linux autostart entry whose command no longer exists',
+			{execPath: getStableLinuxLaunchPath()},
+		);
 	} catch (error) {
 		log.warn('[Autostart] Failed to rewrite the stale Linux autostart entry:', error);
 	}
