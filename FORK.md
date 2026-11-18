@@ -22,6 +22,7 @@ desktop app (`fluxer_desktop`). All other services run the official images uncha
 | A "DPDFNet" noise suppression choice: Ceva's DPDFNet-2 48 kHz model (Apache-2.0), run by onnxruntime-web in a worker, about 70 ms of delay, strength set by the same slider | None yet |
 | Voice defaults: the Custom profile with DPDFNet noise suppression and a fixed 40% activity threshold (upstream: the Voice profile, RNNoise, an automatic threshold). Every install is moved onto them once; later changes stay | Not a bug; a choice for this instance |
 | A "Toggle streaming" shortcut (Keybinds, add a keybind; it can be global): starts a stream (opens the source picker and, in the desktop app, brings the window forward) or stops the current one | None yet |
+| The volume and local mute you set for each person are kept with your account as well as on the device, so an update, a reinstall or another device keeps them. A value set on another device wins for that person. Stored as a fork field (`jd_participant_volumes = 9001`) in the synced preferences; official servers and clients keep it unchanged | None yet |
 
 The official desktop app bundles its own copy of the web client, so it does not get these fixes.
 Use the fork's desktop app instead (below).
@@ -44,6 +45,10 @@ ways:
   its page.
 - **They are not code-signed.** Windows SmartScreen warns on first start ("More info", then
   "Run anyway"). There is no Windows installer, because Fluxer's packaging only makes signed ones.
+- **The Windows ZIP keeps its data in `%APPDATA%\fluxer`**, like the installed official app, not
+  in a folder next to the program. Unzip a new version anywhere and you stay signed in with your
+  settings; moving from the official Windows app keeps its sign-in and settings too. (Builds before
+  2026-11-18 kept everything in a `data` folder beside `Fluxer.exe`.)
 
 Each release lists SHA-256 checksums. At sign-in, enter your instance's address as usual.
 
