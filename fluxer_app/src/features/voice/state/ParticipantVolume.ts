@@ -3,6 +3,7 @@
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {makePersistent} from '@app/features/platform/utils/MobXPersistence';
 import {initializeStore} from '@app/features/platform/utils/StoreInitialization';
+import {makeSyncedField} from '@app/features/user/state/SyncedField';
 import {getStreamKey} from '@app/features/voice/components/StreamKeys';
 import {getEffectiveAudioState} from '@app/features/voice/engine/VoiceEffectiveAudioState';
 import {isScreenShareAudioPublicationLike, VoiceTrackKind} from '@app/features/voice/engine/VoiceTrackSource';
@@ -15,6 +16,7 @@ import {
 	composeVoiceVolumeGain,
 	recalibrateStoredVoiceVolumes,
 } from '@app/features/voice/utils/VoiceVolumeUtils';
+import {ParticipantVolumeSettingsSchema} from '@fluxer/schema/src/gen/fluxer/user/preferences/v1/preferences_pb';
 import type {RemoteAudioTrack, RemoteParticipant, Room} from 'livekit-client';
 import {makeAutoObservable} from 'mobx';
 
@@ -37,6 +39,28 @@ interface VoiceConnectionContextAccess {
 	guildId?: string | null;
 	channelId?: string | null;
 	connectionId?: string | null;
+}
+
+// Fork patch (jdburton91/fluxer): per-person volumes and local mutes also live in the account's
+// synced preferences, so an update, a reinstall or another device keeps them. The device copy
+// stays as before. Volumes go over the wire as whole percentages.
+const PARTICIPANT_VOLUME_SYNC_DEBOUNCE_MS = 1000;
+
+function volumesToWire(volumes: Record<string, number>): Record<string, number> {
+	const wire: Record<string, number> = {};
+	for (const [userId, volume] of Object.entries(volumes)) {
+		if (!Number.isFinite(volume)) continue;
+		wire[userId] = Math.round(clampVoiceVolumePercent(volume));
+	}
+	return wire;
+}
+
+function volumesFromWire(volumes: Record<string, number>): Record<string, number> {
+	const local: Record<string, number> = {};
+	for (const [userId, volume] of Object.entries(volumes)) {
+		local[userId] = clampVoiceVolumePercent(volume);
+	}
+	return local;
 }
 
 function getVoiceConnectionContext(): VoiceConnectionContextAccess {
@@ -91,6 +115,27 @@ class ParticipantVolume {
 	private async initPersistence(): Promise<void> {
 		await makePersistent(this, 'ParticipantVolume', ['volumes', 'localMutes', 'outputVolumeRecalibratedV1']);
 		this.applyOutputVolumeRecalibration();
+		// Fork patch: start syncing only after the device copy has loaded, so a late local load
+		// cannot overwrite what the account already holds. A value set on another device wins
+		// for that person; people set only here are kept and pushed to the account.
+		await makeSyncedField(this, {
+			field: 'jdParticipantVolumes',
+			schema: ParticipantVolumeSettingsSchema,
+			persist: ['volumes', 'localMutes'],
+			debounceMs: PARTICIPANT_VOLUME_SYNC_DEBOUNCE_MS,
+			toMessage: (store) => ({
+				volumes: volumesToWire(store.volumes),
+				localMutes: {...store.localMutes},
+			}),
+			applyMessage: (store, message) => {
+				store.volumes = volumesFromWire(message.volumes);
+				store.localMutes = {...message.localMutes};
+			},
+			mergeRemote: (local, incoming) => ({
+				volumes: {...local.volumes, ...incoming.volumes},
+				localMutes: {...local.localMutes, ...incoming.localMutes},
+			}),
+		});
 	}
 
 	private applyOutputVolumeRecalibration(): void {
