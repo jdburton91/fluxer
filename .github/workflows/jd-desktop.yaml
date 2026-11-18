@@ -312,6 +312,9 @@ jobs:
       - name: Create portable ZIP (Windows)
         if: matrix.platform == 'windows'
         working-directory: ${{ env.WORKDIR }}/fluxer_desktop
+        env:
+          # Fork: no `.portable` marker, so data lives in %APPDATA%\fluxer and survives updates.
+          FLUXER_PORTABLE_MARKER: '0'
         run: >-
           cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
           --step create_portable_zip_windows
