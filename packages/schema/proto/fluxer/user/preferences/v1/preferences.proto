@@ -55,6 +55,11 @@ message SyncedPreferences {
   DoubleTapAction double_tap_action = 117;
   SwipeAction swipe_right_to_left_action = 118;
 
+  // Fork patch (jdburton91/fluxer): per-person voice volumes and local mutes, kept with the
+  // account so updates, reinstalls and other devices keep them. Upstream servers store the
+  // field as an unknown field and send it back unchanged. The number sits far above
+  // upstream's range to stay clear of its future fields.
+  ParticipantVolumeSettings jd_participant_volumes = 9001;
 }
 
 message SpellcheckSettings {
@@ -298,4 +303,10 @@ enum SwipeAction {
 message ReactionEmoji {
   optional string id = 1;
   string name = 2;
+}
+
+// Fork patch (jdburton91/fluxer): keyed by user ID. Volumes are whole percentages (0 to 200).
+message ParticipantVolumeSettings {
+  map<string, uint32> volumes = 1;
+  map<string, bool> local_mutes = 2;
 }
