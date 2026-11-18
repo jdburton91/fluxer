@@ -3382,9 +3382,17 @@ fn create_portable_zip_windows_step() -> Result<()> {
         println!("No unpacked Windows app found; skipping portable ZIP.");
         return Ok(());
     };
+    // Fork patch (jdburton91/fluxer): FLUXER_PORTABLE_MARKER=0 leaves the `.portable` marker out,
+    // so the unzipped app keeps its data in %APPDATA% like an installed one, and a new version
+    // unzipped to a new folder keeps the sign-in and settings.
+    let write_marker = !matches!(env::var("FLUXER_PORTABLE_MARKER").as_deref(), Ok("0"));
     let portable_marker = pack_dir.join(".portable");
-    fs::write(&portable_marker, "")
-        .with_context(|| format!("Failed to write {}", portable_marker.display()))?;
+    if write_marker {
+        fs::write(&portable_marker, "")
+            .with_context(|| format!("Failed to write {}", portable_marker.display()))?;
+    } else {
+        remove_file_if_exists(&portable_marker)?;
+    }
     let zip_name = format!(
         "{}-{version}-portable-win-{arch}.zip",
         config.artifact_prefix
