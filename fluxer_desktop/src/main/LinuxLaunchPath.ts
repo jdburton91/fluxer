@@ -5,6 +5,7 @@ import {existsSync} from 'node:fs';
 import {homedir} from 'node:os';
 import {createChildLogger} from '@electron/common/Logger';
 import {getFlatpakAppId} from '@electron/main/LinuxSandbox';
+import {getLinuxVideoEncodeLaunchEnv} from '@electron/main/LinuxVideoEncodeGpu';
 import {app} from 'electron';
 
 const logger = createChildLogger('LinuxLaunchPath');
@@ -47,6 +48,10 @@ function spawnAfterExit(target: string, args: ReadonlyArray<string>): void {
 }
 
 export function relaunchStableLaunchPath(): void {
+	// Fork patch (jdburton91/fluxer): the new copy starts with the environment the app's own
+	// launchers give it, not with whatever this copy was first started with. Electron's relaunch
+	// helper and the shell below both pass this process's environment on.
+	Object.assign(process.env, getLinuxVideoEncodeLaunchEnv());
 	const appImagePath = getAppImagePath();
 	if (appImagePath != null) {
 		try {

@@ -8,7 +8,8 @@
 // Two halves, because Chromium starts its GPU process from a zygote forked before this code runs,
 // so the GPU process keeps the environment the app was launched with:
 // - the app's own launchers (menu entry, its actions, autostart) start it with LIBVA_DRIVER_NAME
-//   set for the built-in graphics (getLinuxVideoEncodeLaunchEnvPrefix);
+//   set for the built-in graphics (getLinuxVideoEncodeLaunchEnvPrefix), and so does a restart
+//   the app does itself (getLinuxVideoEncodeLaunchEnv);
 // - at start, the app adds --render-node-override for that device, but only when the launch
 //   environment allows VA-API to use it (LIBVA_DRIVER_NAME unset or already that driver).
 // Opt out with FLUXER_DISABLE_IGPU_VIDEO_ENCODE=1, or by passing --render-node-override yourself.
@@ -145,6 +146,14 @@ function getVideoEncodeGpuTarget(): VideoEncodeGpuTargetResult {
 export function getLinuxVideoEncodeLaunchEnvPrefix(): string {
 	const {target} = getVideoEncodeGpuTarget();
 	return target ? `env LIBVA_DRIVER_NAME=${target.libvaDriverName} ` : '';
+}
+
+// For a restart the app starts itself (after an update, from the tray): the variables its own
+// launchers would set. Without them the new copy inherits this one's launch environment, and a
+// copy first started with LIBVA_DRIVER_NAME=nvidia stays on software encoding through every restart.
+export function getLinuxVideoEncodeLaunchEnv(): Record<string, string> {
+	const {target} = getVideoEncodeGpuTarget();
+	return target ? {LIBVA_DRIVER_NAME: target.libvaDriverName} : {};
 }
 
 // Must run before the app is ready: the GPU process reads the switch from its command line.
