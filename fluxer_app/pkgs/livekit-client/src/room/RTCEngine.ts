@@ -112,6 +112,12 @@ const minReconnectWait = 2 * 1000;
 const leaveReconnect = 'leave-reconnect';
 
 const connectionQualityLostTimeout = 10 * 1000;
+// Fork patch (jdburton91/fluxer): off. The server's LOST rating alone is not a dead connection:
+// a screen share whose audio track goes quiet is rated LOST while everything else still flows,
+// and the full reconnect this rule then forces drops the person out of the call and ends their
+// stream. A connection that really fails still reconnects through the peer connection and
+// signal handlers.
+const lostQualityReconnectEnabled = false;
 const reliabeReceiveStateTTL = 30_000;
 const initialMediaSectionsAudio = 3;
 const initialMediaSectionsVideo = 3;
@@ -1125,7 +1131,7 @@ export default class RTCEngine extends (EventEmitter as new () => TypedEventEmit
 	}
 
 	private scheduleLostQualityReconnect() {
-		if (this.lostQualityTimeout) {
+		if (!lostQualityReconnectEnabled || this.lostQualityTimeout) {
 			return;
 		}
 		this.lostQualityTimeout = CriticalTimers.setTimeout(() => {
