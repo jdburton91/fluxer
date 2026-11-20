@@ -17,7 +17,6 @@ desktop app (`fluxer_desktop`). All other services run the official images uncha
 
 | Fix | Upstream report |
 | --- | --- |
-| Leaving a channel that denies Speak (such as an AFK channel) no longer leaves you self-muted | [Feedback #4789](https://feedback.fluxer.com/p/4789) |
 | A "Noise suppression strength" slider in voice settings: DeepFilterNet's noise reduction, fixed upstream at 30 dB, can be set from 6 dB to no limit, and changes apply live | [Feedback #4791](https://feedback.fluxer.com/p/4791) |
 | A "DPDFNet" noise suppression choice: Ceva's DPDFNet-2 48 kHz model (Apache-2.0), run by onnxruntime-web in a worker, about 70 ms of delay, strength set by the same slider | None yet |
 | Voice defaults: the Custom profile with DPDFNet noise suppression and a fixed 40% activity threshold (upstream: the Voice profile, RNNoise, an automatic threshold). Every install is moved onto them once; later changes stay | Not a bug; a choice for this instance |
