@@ -1279,8 +1279,13 @@ class Room extends (EventEmitter as new () => TypedEmitter<RoomEventCallbacks>) 
 			) {
 				throw new Error('cannot switch audio output, the current browser does not support it');
 			}
+			const isDefaultOutput = deviceId === 'default' || deviceId === '';
 			if (this.options.webAudioMix) {
-				deviceId = (await DeviceManager.getInstance().normalizeDeviceId('audiooutput', deviceId)) ?? '';
+				// Fork patch (jdburton91/fluxer): AudioContext.setSinkId('') follows the system
+				// default output device instead of pinning to a concrete hardware device id.
+				deviceId = isDefaultOutput
+					? ''
+					: ((await DeviceManager.getInstance().normalizeDeviceId('audiooutput', deviceId)) ?? '');
 			}
 			this.options.audioOutput ??= {};
 			const prevDeviceId = this.getActiveDevice(kind) ?? this.options.audioOutput.deviceId;
@@ -1288,10 +1293,12 @@ class Room extends (EventEmitter as new () => TypedEmitter<RoomEventCallbacks>) 
 
 			try {
 				if (this.options.webAudioMix) {
-					(this.audioContext as AudioContext & {setSinkId?: (id: string) => Promise<void>})?.setSinkId?.(deviceId);
+					await (this.audioContext as AudioContext & {setSinkId?: (id: string) => Promise<void>})?.setSinkId?.(
+						deviceId,
+					);
+				} else {
+					await Promise.all(Array.from(this.remoteParticipants.values()).map((p) => p.setAudioOutput({deviceId})));
 				}
-
-				await Promise.all(Array.from(this.remoteParticipants.values()).map((p) => p.setAudioOutput({deviceId})));
 			} catch (e) {
 				this.options.audioOutput.deviceId = prevDeviceId;
 				throw e;
@@ -1960,6 +1967,12 @@ class Room extends (EventEmitter as new () => TypedEmitter<RoomEventCallbacks>) 
 				continue;
 			}
 			if (
+				kind === 'audiooutput' &&
+				(activeDevice === '' || activeDevice === 'default' || typeof this.options.webAudioMix === 'object')
+			) {
+				continue;
+			}
+			if (
 				devicesOfKind.length > 0 &&
 				!devicesOfKind.find((deviceInfo) => deviceInfo.deviceId === this.getActiveDevice(kind)) &&
 				(kind !== 'audiooutput' || !isSafariBased())
@@ -1999,6 +2012,22 @@ class Room extends (EventEmitter as new () => TypedEmitter<RoomEventCallbacks>) 
 			}
 		});
 	};
+
+	// Fork patch (jdburton91/fluxer): allow VoiceOutputDeviceSync to hot-swap a fresh
+	// shared AudioContext into an active room when switching output devices or recovering
+	// from an OS audio device change.
+	async setAudioContext(audioContext: AudioContext, outputDeviceId?: string) {
+		if (typeof this.options.webAudioMix === 'object' && this.options.webAudioMix !== null) {
+			this.options.webAudioMix = {...this.options.webAudioMix, audioContext};
+		}
+		this.audioContext = audioContext;
+		if (outputDeviceId !== undefined) {
+			this.options.audioOutput ??= {};
+			this.options.audioOutput.deviceId = outputDeviceId;
+			this.localParticipant.activeDeviceMap.set('audiooutput', outputDeviceId);
+		}
+		await this.acquireAudioContext();
+	}
 
 	private async acquireAudioContext() {
 		if (typeof this.options.webAudioMix !== 'boolean' && this.options.webAudioMix.audioContext) {

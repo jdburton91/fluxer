@@ -159,6 +159,9 @@ export default class RemoteAudioTrack extends RemoteTrack<Track.Kind.Audio> {
 
 	private connectWebAudio(context: AudioContext, element: HTMLMediaElement) {
 		this.disconnectWebAudio();
+		if (!element.srcObject) {
+			return;
+		}
 		this.sourceNode = context.createMediaStreamSource(element.srcObject as MediaStream);
 		let lastNode: AudioNode = this.sourceNode;
 		this.webAudioPluginNodes.forEach((node) => {
@@ -166,11 +169,16 @@ export default class RemoteAudioTrack extends RemoteTrack<Track.Kind.Audio> {
 			lastNode = node;
 		});
 		this.gainNode = context.createGain();
+		if (this.elementVolume !== undefined) {
+			this.gainNode.gain.value = this.elementVolume;
+		}
 		lastNode.connect(this.gainNode);
 		this.gainNode.connect(context.destination);
 
-		if (this.elementVolume !== undefined) {
-			this.gainNode.gain.setTargetAtTime(this.elementVolume, 0, 0.1);
+		if (element.paused) {
+			void element.play().catch((e) => {
+				this.log.debug('Failed to resume muted audio element during WebAudio attach', {...this.logContext, error: e});
+			});
 		}
 
 		if (context.state !== 'running') {
