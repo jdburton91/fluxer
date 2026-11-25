@@ -23,6 +23,7 @@ desktop app (`fluxer_desktop`). All other services run the official images uncha
 | A "Toggle streaming" shortcut (Keybinds, add a keybind; it can be global): starts a stream (opens the source picker and, in the desktop app, brings the window forward) or stops the current one | None yet |
 | The volume and local mute you set for each person are kept with your account as well as on the device, so an update, a reinstall or another device keeps them. A value set on another device wins for that person. Stored as a fork field (`jd_participant_volumes = 9001`) in the synced preferences; official servers and clients keep it unchanged | None yet |
 | A screen share no longer drops out of the call and rejoins when the server rates its connection "lost" (for example when the stream's audio goes quiet). LiveKit's client forced a full reconnect after 10 seconds of that rating; the rule is off, and real connection failures still reconnect | None yet |
+| Connecting headphones or switching audio outputs while Fluxer is running no longer silences voice playback until an app restart: output sync now reacts to OS audio device changes, stops pinning "Default" to the old hardware device or racing concurrent `setSinkId` calls, and recreates the shared Web Audio playback context on the new output device cleanly | None yet |
 
 The official desktop app bundles its own copy of the web client, so it does not get these fixes.
 Use the fork's desktop app instead (below).

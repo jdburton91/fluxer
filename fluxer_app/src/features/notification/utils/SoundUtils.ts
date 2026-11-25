@@ -128,6 +128,18 @@ export function setSoundOutputDeviceIdResolver(resolver: () => string | null): v
 	soundOutputDeviceIdResolver = resolver;
 }
 
+export function resetCallAudioContext(): void {
+	const previous = callAudioContext;
+	callAudioContext = null;
+	lastAppliedContextSinkId = null;
+	rejectedContextSinkId = null;
+	if (previous && previous.state !== 'closed') {
+		void previous.close().catch((error) => {
+			logger.debug('Failed to close previous call sound AudioContext', {error});
+		});
+	}
+}
+
 const resolveSoundOutputSinkId = (): string | null => {
 	const deviceId = soundOutputDeviceIdResolver?.();
 	if (!deviceId) return null;

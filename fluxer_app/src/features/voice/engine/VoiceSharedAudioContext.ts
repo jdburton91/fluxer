@@ -144,7 +144,44 @@ function installMasterSoftClip(context: AudioContext): void {
 	}
 }
 
+const RESUME_GESTURE_EVENTS = ['pointerdown', 'keydown'] as const;
+
+type SinkableAudioContextOptions = AudioContextOptions & {
+	sinkId?: string;
+};
+
 let sharedAudioContext: AudioContext | null = null;
+let outputDeviceChangeGeneration = 0;
+let deviceChangeTrackingInstalled = false;
+const contextCreatedAtGeneration = new WeakMap<AudioContext, number>();
+
+function ensureDeviceChangeTracking(): void {
+	if (deviceChangeTrackingInstalled) return;
+	if (typeof navigator === 'undefined' || !navigator.mediaDevices?.addEventListener) return;
+	deviceChangeTrackingInstalled = true;
+	navigator.mediaDevices.addEventListener('devicechange', () => {
+		outputDeviceChangeGeneration += 1;
+	});
+}
+
+export function supportsNativeAudioContextSetSinkId(): boolean {
+	return typeof AudioContext !== 'undefined' && 'setSinkId' in AudioContext.prototype;
+}
+
+export function isSharedVoiceAudioContext(context: AudioContext | null | undefined): boolean {
+	return context !== null && context !== undefined && context === sharedAudioContext;
+}
+
+export function isSharedVoiceAudioContextStale(context: AudioContext): boolean {
+	return (contextCreatedAtGeneration.get(context) ?? -1) !== outputDeviceChangeGeneration;
+}
+
+export function closeVoiceAudioContext(context: AudioContext | null | undefined): void {
+	if (!context || context.state === 'closed') return;
+	void context.close().catch((error) => {
+		logger.debug('Failed to close previous shared voice AudioContext', {error});
+	});
+}
 
 export function resolveAudioContextConstructor(): AudioContextConstructor | null {
 	if (typeof window === 'undefined') return null;
@@ -154,7 +191,7 @@ export function resolveAudioContextConstructor(): AudioContextConstructor | null
 	return ctor ?? null;
 }
 
-export function createVoiceAudioContext(options: AudioContextOptions): AudioContext | null {
+export function createVoiceAudioContext(options: SinkableAudioContextOptions): AudioContext | null {
 	const ctor = resolveAudioContextConstructor();
 	if (!ctor) return null;
 	try {
@@ -165,39 +202,85 @@ export function createVoiceAudioContext(options: AudioContextOptions): AudioCont
 	}
 }
 
-function installResumeOnUserGesture(context: AudioContext): void {
-	if (typeof window === 'undefined') return;
-	if (!window.document?.body) return;
-	const body = window.document.body;
-	const handleResume = (): void => {
-		if (context.state === 'suspended') {
-			void context.resume().catch((error) => {
-				logger.debug('Failed to auto-resume shared voice AudioContext on user gesture', {error});
-			});
+function isAudioContextPausedState(state: AudioContextState): boolean {
+	return state === 'suspended' || (state as string) === 'interrupted';
+}
+
+function installPersistentResume(context: AudioContext): void {
+	const tryResume = (): void => {
+		if (!isAudioContextPausedState(context.state)) return;
+		void context.resume().catch((error) => {
+			logger.debug('Failed to resume shared voice AudioContext', {error});
+		});
+	};
+	const syncGestureListeners = (): void => {
+		if (typeof window === 'undefined') return;
+		const shouldArm = isAudioContextPausedState(context.state);
+		for (const eventType of RESUME_GESTURE_EVENTS) {
+			if (shouldArm) window.addEventListener(eventType, tryResume, {capture: true});
+			else window.removeEventListener(eventType, tryResume, {capture: true});
 		}
-		body.removeEventListener('click', handleResume);
 	};
 	context.addEventListener('statechange', () => {
-		if (context.state === 'closed') {
-			body.removeEventListener('click', handleResume);
+		syncGestureListeners();
+		if (isAudioContextPausedState(context.state)) {
+			tryResume();
 		}
 	});
-	body.addEventListener('click', handleResume);
+	syncGestureListeners();
+	if (isAudioContextPausedState(context.state)) {
+		tryResume();
+	}
+}
+
+function initializeSharedVoiceAudioContext(context: AudioContext): AudioContext {
+	assert.notEqual(context.state, 'closed', 'shared voice AudioContext must not start closed');
+	installMasterSoftClip(context);
+	contextCreatedAtGeneration.set(context, outputDeviceChangeGeneration);
+	installPersistentResume(context);
+	return context;
+}
+
+export interface RecreatedSharedVoiceAudioContext {
+	context: AudioContext;
+	previous: AudioContext | null;
+	sinkIdAppliedByConstructor: boolean;
+}
+
+export function recreateSharedVoiceAudioContext(
+	options: {sinkId?: string} = {},
+): RecreatedSharedVoiceAudioContext | null {
+	ensureDeviceChangeTracking();
+	const previous = sharedAudioContext && sharedAudioContext.state !== 'closed' ? sharedAudioContext : null;
+	const requestedSinkId = options.sinkId;
+	let next: AudioContext | null = null;
+	let sinkIdAppliedByConstructor = false;
+	if (requestedSinkId && supportsNativeAudioContextSetSinkId()) {
+		next = createVoiceAudioContext({latencyHint: 'interactive', sinkId: requestedSinkId});
+		if (next) {
+			sinkIdAppliedByConstructor = true;
+		}
+	}
+	if (!next) {
+		next = createVoiceAudioContext({latencyHint: 'interactive'});
+		sinkIdAppliedByConstructor = !requestedSinkId;
+	}
+	if (!next) return null;
+	sharedAudioContext = initializeSharedVoiceAudioContext(next);
+	return {
+		context: sharedAudioContext,
+		previous,
+		sinkIdAppliedByConstructor,
+	};
 }
 
 export function getSharedVoiceAudioContext(): AudioContext | null {
+	ensureDeviceChangeTracking();
 	if (sharedAudioContext && sharedAudioContext.state !== 'closed') {
 		return sharedAudioContext;
 	}
-	sharedAudioContext = createVoiceAudioContext({latencyHint: 'interactive'});
-	if (!sharedAudioContext) return null;
-	assert.notEqual(sharedAudioContext.state, 'closed', 'shared voice AudioContext must not start closed');
-	installMasterSoftClip(sharedAudioContext);
-	if (sharedAudioContext.state === 'suspended') {
-		void sharedAudioContext.resume().catch((error) => {
-			logger.debug('Initial resume of shared voice AudioContext rejected', {error});
-		});
-		installResumeOnUserGesture(sharedAudioContext);
-	}
+	const created = createVoiceAudioContext({latencyHint: 'interactive'});
+	if (!created) return null;
+	sharedAudioContext = initializeSharedVoiceAudioContext(created);
 	return sharedAudioContext;
 }

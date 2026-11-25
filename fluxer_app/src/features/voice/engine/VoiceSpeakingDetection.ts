@@ -94,7 +94,7 @@ export class VoiceSpeakingMeter {
 	private syncTap(): SpeakingMeterTap | null {
 		const candidate = this.readTrack();
 		const track = candidate?.readyState === 'live' ? candidate : null;
-		if (track === this.track) return this.tap;
+		if (track === this.track && (!track || (this.tap && this.tap.context.state !== 'closed'))) return this.tap;
 		this.closeTap();
 		this.track = track;
 		this.hysteresis = {...SILENT_SPEAKING_HYSTERESIS, speaking: this.hysteresis.speaking};

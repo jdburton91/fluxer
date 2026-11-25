@@ -245,6 +245,7 @@ class VoiceEngineV2AppRemoteSpeakingAdapter {
 			this.analysers.size <= REMOTE_SPEAKING_ANALYSER_HANDLES_CAP,
 			'tickHost pre-condition: analyser cap respected',
 		);
+		this.rebindHandlesIfSharedContextClosed();
 		const sizeBefore = this.analysers.size;
 		const expired: Array<AnalyserHandle> = [];
 		for (const handle of this.analysers.values()) {
@@ -257,6 +258,29 @@ class VoiceEngineV2AppRemoteSpeakingAdapter {
 			this.processHandleTick(handle, nowMs);
 		}
 		assert.ok(this.analysers.size <= sizeBefore, 'tickHost post-condition: handles only removed');
+	}
+
+	private rebindHandlesIfSharedContextClosed(): void {
+		if (!this.audioContextIsShared || !this.audioContext || this.audioContext.state !== 'closed') return;
+		this.audioContext = null;
+		const nextCtx = this.getAudioContext();
+		if (!nextCtx) return;
+		for (const handle of this.analysers.values()) {
+			if (handle.track.readyState === 'ended') continue;
+			this.disposeHandle(handle);
+			try {
+				const source = nextCtx.createMediaStreamSource(new MediaStream([handle.track]));
+				const analyser = createSpeakingAnalyser(nextCtx);
+				source.connect(analyser);
+				handle.source = source;
+				handle.analyser = analyser;
+			} catch (error) {
+				logger.warn('Failed to rebind remote speaking analyser after shared AudioContext reset', {
+					identity: handle.identity,
+					error,
+				});
+			}
+		}
 	}
 
 	private processHandleTick(handle: AnalyserHandle, nowMs: number): void {
